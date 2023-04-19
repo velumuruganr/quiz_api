@@ -84,7 +84,7 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
 # login endpoint
 @app.post("/login")
 def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
-    db_user = db.query(User).filter(User.username == form_data.username).first()
+    db_user = db.query(UserModel).filter(UserModel.username == form_data.username).first()
     if db_user is None:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid username or password")
     if not verify_password(form_data.password, db_user.password):
