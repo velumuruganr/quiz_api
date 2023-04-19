@@ -10,6 +10,7 @@ from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from datetime import datetime, timedelta
 from dotenv import load_dotenv
 from urllib.parse import quote_plus
+from fastapi.middleware.cors import CORSMiddleware
 
 from models import PersonalDevelopmentArea, UserModel
 from schemas import User
@@ -38,6 +39,12 @@ ACCESS_TOKEN_EXPIRE_MINUTES = 30
 app = FastAPI()
 router = APIRouter()
 
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 # database configuration
 DATABASE_URL = f"mysql+mysqlconnector://{DB_USERNAME}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
 engine = create_engine(DATABASE_URL, echo=True)
@@ -97,7 +104,7 @@ def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depend
         expires_delta=access_token_expires
     )
 
-    return {"access_token": access_token, "token_type": "bearer"}
+    return {"access_token": access_token, "token_type": "bearer", "role":db_user.role}
 
 
 
