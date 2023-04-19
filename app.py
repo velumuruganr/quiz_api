@@ -1,6 +1,6 @@
 import os
 from jose import jwt
-from typing import Optional
+from typing import List, Optional
 from fastapi import FastAPI, HTTPException, Depends, status, APIRouter
 from sqlalchemy.orm import Session
 from sqlalchemy import create_engine
@@ -12,8 +12,8 @@ from dotenv import load_dotenv
 from urllib.parse import quote_plus
 from fastapi.middleware.cors import CORSMiddleware
 
-from models import PersonalDevelopmentArea, UserModel
-from schemas import User
+from models import PersonalDevelopmentArea, School, User
+from schemas import SchoolCreate, SchoolResponse, SchoolUpdate, UserRequest
 
 
 # Load environment variables from .env file
@@ -91,7 +91,7 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
 # login endpoint
 @app.post("/login")
 def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
-    db_user = db.query(UserModel).filter(UserModel.username == form_data.username).first()
+    db_user = db.query(User).filter(User.username == form_data.username).first()
     if db_user is None:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid username or password")
     if not verify_password(form_data.password, db_user.password):
@@ -103,27 +103,29 @@ def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depend
         data={"sub": db_user.username, "role": db_user.role},
         expires_delta=access_token_expires
     )
-
     return {"access_token": access_token, "token_type": "bearer", "role":db_user.role}
-
 
 
 # create user endpoint
 @app.post("/users")
-def create_user(user: User, db: Session = Depends(get_db)):
-    db_user = db.query(UserModel).filter(UserModel.username == user.username).first()
+def create_user(user: UserRequest, db: Session = Depends(get_db)):
+    db_user = db.query(User).filter(User.username == user.username).first()
     if db_user:
         raise HTTPException(status_code=400, detail="Username already exists")
     hashed_password = get_password_hash(user.password)
     user_data = user.dict()
     user_data["password"] = hashed_password
-    db_user = UserModel(**user_data)
+    db_user = User(**user_data)
     db.add(db_user)
     db.commit()
     db.refresh(db_user)
     return db_user
 
 
+
+#CRUD API for Personal Development Areas
+
+# create a new school
 @router.post("/personalDevelopmentAreas")
 def create_text(content: str, db: Session = Depends(get_db)):
     text = PersonalDevelopmentArea(content=content)
@@ -132,7 +134,7 @@ def create_text(content: str, db: Session = Depends(get_db)):
     db.refresh(text)
     return text
 
-
+# get all areas
 @router.get("/personalDevelopmentAreas")
 def read_all_text(db: Session = Depends(get_db)):
     texts = db.query(PersonalDevelopmentArea).all()
@@ -140,7 +142,7 @@ def read_all_text(db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="No Data found")
     return texts
 
-
+# get a specific area by ID
 @router.get("/personalDevelopmentAreas/{id}")
 def read_text(id: int, db: Session = Depends(get_db)):
     text = db.query(PersonalDevelopmentArea).filter(PersonalDevelopmentArea.id == id).first()
@@ -148,7 +150,7 @@ def read_text(id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Data not found")
     return text
 
-
+# update a specific area by ID
 @router.put("/personalDevelopmentAreas/{id}")
 def update_text(id: int, content: str, db: Session = Depends(get_db)):
     text = db.query(PersonalDevelopmentArea).filter(PersonalDevelopmentArea.id == id).first()
@@ -159,7 +161,7 @@ def update_text(id: int, content: str, db: Session = Depends(get_db)):
     db.refresh(text)
     return text
 
-
+# delete a specific area by ID
 @router.delete("/personalDevelopmentAreas/{id}")
 def delete_text(id: int, db: Session = Depends(get_db)):
     text = db.query(PersonalDevelopmentArea).filter(PersonalDevelopmentArea.id == id).first()
@@ -168,6 +170,53 @@ def delete_text(id: int, db: Session = Depends(get_db)):
     db.delete(text)
     db.commit()
     return {"message": "Data deleted"}
+
+
+#CRUD API for Schools
+
+# create a new school
+@router.post("/schools", response_model=SchoolResponse)
+def create_school(school: SchoolCreate, db: Session = Depends(get_db)):
+    new_school = School(**school.dict())
+    db.add(new_school)
+    db.commit()
+    db.refresh(new_school)
+    return new_school
+
+# get all schools
+@router.get("/schools", response_model=List[SchoolResponse])
+def read_schools(db: Session = Depends(get_db)):
+    schools = db.query(School).all()
+    return schools
+
+# get a specific school by ID
+@router.get("/schools/{school_id}", response_model=SchoolResponse)
+def read_school(school_id: int, db: Session = Depends(get_db)):
+    school = db.query(School).filter(School.id == school_id).first()
+    if not school:
+        raise HTTPException(status_code=404, detail="School not found")
+    return school
+
+# update a specific school by ID
+@router.put("/schools/{school_id}", response_model=SchoolResponse)
+def update_school(school_id: int, school: SchoolUpdate, db: Session = Depends(get_db)):
+    existing_school = db.query(School).filter(School.id == school_id).first()
+    if not existing_school:
+        raise HTTPException(status_code=404, detail="School not found")
+    for field, value in school:
+        setattr(existing_school, field, value)
+    db.commit()
+    return existing_school
+
+# delete a specific school by ID
+@router.delete("/schools/{school_id}")
+def delete_school(school_id: int, db: Session = Depends(get_db)):
+    school = db.query(School).filter(School.id == school_id).first()
+    if not school:
+        raise HTTPException(status_code=404, detail="School not found")
+    db.delete(school)
+    db.commit()
+    return {"message": "School deleted successfully"}
 
 
 app.include_router(router)

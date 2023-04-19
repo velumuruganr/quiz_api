@@ -2,9 +2,8 @@ from sqlalchemy import Column, Integer, String, Enum as EnumColumn
 from enum import Enum
 from sqlalchemy.ext.declarative import declarative_base
 
-
-
 Base = declarative_base()
+
 # user roles enum
 class UserRole(str, Enum):
     admin = "admin"
@@ -12,7 +11,7 @@ class UserRole(str, Enum):
 
 
 # user model
-class UserModel(Base):
+class User(Base):
     __tablename__ = "users"
 
     id = Column(Integer, primary_key=True, index=True)
@@ -24,8 +23,14 @@ class UserModel(Base):
     
 
 class PersonalDevelopmentArea(Base):
-    
     __tablename__ = "personal_development_areas"
     
     id = Column(Integer, primary_key=True, index=True)
     content = Column(String(255))
+    
+    
+class School(Base):
+    __tablename__ = "schools"
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(50), index=True)
+    sentence = Column(String(255), index=True)
