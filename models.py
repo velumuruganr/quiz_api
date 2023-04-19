@@ -33,4 +33,4 @@ class School(Base):
     __tablename__ = "schools"
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String(50), index=True)
-    sentence = Column(String(255), index=True)
+    address = Column(String(255), index=True)

@@ -125,9 +125,9 @@ def create_user(user: UserRequest, db: Session = Depends(get_db)):
 
 #CRUD API for Personal Development Areas
 
-# create a new school
+# create a new area
 @router.post("/personalDevelopmentAreas")
-def create_text(content: str, db: Session = Depends(get_db)):
+def create_area(content: str, db: Session = Depends(get_db)):
     text = PersonalDevelopmentArea(content=content)
     db.add(text)
     db.commit()
@@ -136,7 +136,7 @@ def create_text(content: str, db: Session = Depends(get_db)):
 
 # get all areas
 @router.get("/personalDevelopmentAreas")
-def read_all_text(db: Session = Depends(get_db)):
+def read_all_areas(db: Session = Depends(get_db)):
     texts = db.query(PersonalDevelopmentArea).all()
     if not texts:
         raise HTTPException(status_code=404, detail="No Data found")
@@ -144,7 +144,7 @@ def read_all_text(db: Session = Depends(get_db)):
 
 # get a specific area by ID
 @router.get("/personalDevelopmentAreas/{id}")
-def read_text(id: int, db: Session = Depends(get_db)):
+def read_area(id: int, db: Session = Depends(get_db)):
     text = db.query(PersonalDevelopmentArea).filter(PersonalDevelopmentArea.id == id).first()
     if not text:
         raise HTTPException(status_code=404, detail="Data not found")
@@ -152,7 +152,7 @@ def read_text(id: int, db: Session = Depends(get_db)):
 
 # update a specific area by ID
 @router.put("/personalDevelopmentAreas/{id}")
-def update_text(id: int, content: str, db: Session = Depends(get_db)):
+def update_area(id: int, content: str, db: Session = Depends(get_db)):
     text = db.query(PersonalDevelopmentArea).filter(PersonalDevelopmentArea.id == id).first()
     if not text:
         raise HTTPException(status_code=404, detail="Data not found")
@@ -163,7 +163,7 @@ def update_text(id: int, content: str, db: Session = Depends(get_db)):
 
 # delete a specific area by ID
 @router.delete("/personalDevelopmentAreas/{id}")
-def delete_text(id: int, db: Session = Depends(get_db)):
+def delete_area(id: int, db: Session = Depends(get_db)):
     text = db.query(PersonalDevelopmentArea).filter(PersonalDevelopmentArea.id == id).first()
     if not text:
         raise HTTPException(status_code=404, detail="Data not found")
@@ -185,7 +185,7 @@ def create_school(school: SchoolCreate, db: Session = Depends(get_db)):
 
 # get all schools
 @router.get("/schools", response_model=List[SchoolResponse])
-def read_schools(db: Session = Depends(get_db)):
+def read_all_schools(db: Session = Depends(get_db)):
     schools = db.query(School).all()
     return schools
 
