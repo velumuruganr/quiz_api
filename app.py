@@ -15,8 +15,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from models import PersonalDevelopmentArea, School, Teacher, User
 from schemas import JWTUser, PasswordUpdateRequest, SchoolCreate, SchoolResponse, SchoolUpdate, TeacherDetails, UserRequest
 import schemas
-import crud
 import models
+import uvicorn
 
 # Load environment variables from .env file
 load_dotenv()
@@ -379,3 +379,8 @@ def delete_school(school_id: int, db: Session = Depends(get_db)):
 
 app.include_router(router)
 
+def main():
+    uvicorn.run(app, port=8000)
+    
+if __name__ == "__main__":
+    main()
