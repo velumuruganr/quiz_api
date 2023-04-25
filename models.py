@@ -1,6 +1,8 @@
-from sqlalchemy import Column, Integer, String, Enum as EnumColumn
+from sqlalchemy import Column, ForeignKey, Integer, String, Enum as EnumColumn
 from enum import Enum
 from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import relationship
+
 
 Base = declarative_base()
 
@@ -19,8 +21,9 @@ class User(Base):
     email = Column(String(255), unique=True)
     name = Column(String(255))
     password = Column(String(255))
-    role = Column(EnumColumn(UserRole))
+    role = Column(EnumColumn(UserRole))   
     
+    teacher = relationship("Teacher", back_populates="user")
 
 class PersonalDevelopmentArea(Base):
     __tablename__ = "personal_development_areas"
@@ -34,3 +37,16 @@ class School(Base):
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String(50), index=True)
     address = Column(String(255), index=True)
+    
+    teachers = relationship("Teacher", back_populates="school")
+    
+
+class Teacher(Base):
+    __tablename__ = "teachers"
+    id = Column(Integer, primary_key=True, index=True)
+    mobile_number = Column(String, unique=True, index=True)
+    school_id = Column(Integer, ForeignKey("schools.id"), nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    
+    school = relationship("School", back_populates="teachers")
+    user = relationship("User", back_populates="teacher")

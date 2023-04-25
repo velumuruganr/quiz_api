@@ -34,3 +34,49 @@ class SchoolResponse(BaseModel):
 
     class Config:
         orm_mode = True
+        
+
+class JWTUser(BaseModel):
+    sub : str
+    role : UserRole
+    
+
+class PasswordUpdateRequest(BaseModel):
+    token : str
+    old_password : str
+    new_password : str
+    
+    
+#Teacher Schema
+class TeacherBase(BaseModel):
+    mobile_number : str
+
+class TeacherCreate(TeacherBase):
+    school_id: int
+    username: str
+    name: str
+    email: str
+    password: str
+
+class Teacher(TeacherBase):
+    id: int
+    school_id: int
+    user_id: int
+
+    class Config:
+        orm_mode = True
+
+class TeacherDetails(BaseModel):
+    id:int
+    name: str
+    username: str
+    email: str
+    mobile_number: str
+    school_name: str
+    school_address: str
+    
+    
+class Proile(BaseModel):
+    name:str
+    email: str
+    mobile_number: str

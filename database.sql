@@ -18,3 +18,12 @@ CREATE TABLE schools (
     name VARCHAR(50) NOT NULL,
     address VARCHAR(100) NOT NULL
 );
+
+CREATE TABLE teachers (
+  id INTEGER AUTO_INCREMENT PRIMARY KEY,
+  mobile_number VARCHAR(20) NOT NULL,
+  school_id INTEGER NOT NULL,
+  user_id INTEGER NOT NULL,
+  FOREIGN KEY (school_id) REFERENCES schools (id),
+  FOREIGN KEY (user_id) REFERENCES users (id)
+);

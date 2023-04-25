@@ -4,7 +4,7 @@ from typing import List, Optional
 from fastapi import FastAPI, HTTPException, Depends, status, APIRouter
 from sqlalchemy.orm import Session
 from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import sessionmaker, subqueryload
 from passlib.context import CryptContext
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from datetime import datetime, timedelta
@@ -12,9 +12,11 @@ from dotenv import load_dotenv
 from urllib.parse import quote_plus
 from fastapi.middleware.cors import CORSMiddleware
 
-from models import PersonalDevelopmentArea, School, User
-from schemas import SchoolCreate, SchoolResponse, SchoolUpdate, UserRequest
-
+from models import PersonalDevelopmentArea, School, Teacher, User
+from schemas import JWTUser, PasswordUpdateRequest, SchoolCreate, SchoolResponse, SchoolUpdate, TeacherDetails, UserRequest
+import schemas
+import crud
+import models
 
 # Load environment variables from .env file
 load_dotenv()
@@ -84,9 +86,19 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
     return encoded_jwt
 
 
+
 # OAuth2 authentication
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
 
+def get_username(token: str):
+    # Verify the JWT token and extract the email address
+    try:
+        jwt_user = JWTUser(**jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM]))
+    except:
+        raise HTTPException(status_code=401, detail="Invalid token")
+    
+    # Return the user details
+    return jwt_user
 
 # login endpoint
 @app.post("/login")
@@ -106,6 +118,32 @@ def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depend
     return {"access_token": access_token, "token_type": "bearer", "role":db_user.role}
 
 
+@app.put("/update_password")
+async def update_password(request: PasswordUpdateRequest, db: Session = Depends(get_db)):
+
+    
+    username = get_username(request.token)
+    user = db.query(User).filter(User.username == username.sub).first()
+    # Check if the email address is valid
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # Verify the old password
+    if not pwd_context.verify(request.old_password, user.password):
+        raise HTTPException(status_code=400, detail="Invalid password")
+    
+    # Hash the new password
+    hashed_password = pwd_context.hash(request.new_password)
+    
+    # Update the user's password
+    user.password = hashed_password
+    
+    db.commit()
+    db.refresh(user)
+    
+    return {"message": "Password updated successfully"}
+
+
 # create user endpoint
 @app.post("/users")
 def create_user(user: UserRequest, db: Session = Depends(get_db)):
@@ -121,6 +159,119 @@ def create_user(user: UserRequest, db: Session = Depends(get_db)):
     db.refresh(db_user)
     return db_user
 
+
+# Create a new teacher
+@router.post("/teachers")
+def create_teacher(teacher: schemas.TeacherCreate, db: Session = Depends(get_db)):
+    hashed_password = get_password_hash(teacher.password)
+    db_user = models.User(
+        email=teacher.email,
+        name=teacher.name,
+        username=teacher.username,
+        password=hashed_password,
+        role="teacher"
+    )
+    db.add(db_user)
+    db.commit()
+    db.refresh(db_user)
+    db_teacher = models.Teacher(
+        mobile_number=teacher.mobile_number,
+        user_id=db_user.id,
+        school_id=teacher.school_id
+    )
+    db.add(db_teacher)
+    db.commit()
+    db.refresh(db_teacher)
+    return {"message":"Teacher Created Successfully"}
+
+
+def get_user_by_id(db: Session, user_id: int):
+    return db.query(models.User).filter(models.User.id == user_id).first()
+
+
+# def update_user(user_id: int, user: schemas.UserRequest, db: Session = Depends(get_db)):
+#     db_teacher = db.query(User).filter(User.id == user_id).first()
+#     if not db_teacher:
+#         raise HTTPException(status_code=404, detail="User not found")
+#     for attr, value in user.dict(exclude_unset=True).items():
+#         setattr(db_teacher, attr, value)
+#     db.commit()
+#     db.refresh(db_teacher)
+#     return db_teacher
+
+
+# Get a teacher by ID
+@router.get("/teachers/{teacher_id}")
+def read_teacher(teacher_id: int, db: Session = Depends(get_db)):
+    db_teacher = db.query(Teacher).filter(Teacher.id == teacher_id).first()
+    if not db_teacher:
+        raise HTTPException(status_code=404, detail="Teacher not found")
+    user = db.query(User).filter(User.id == db_teacher.user_id).first()
+    school = db.query(School).filter(School.id == db_teacher.school_id).first()
+    return TeacherDetails(
+        id=db_teacher.id,
+        username=user.username,
+        name=user.name,
+        email=user.email,
+        mobile_number = db_teacher.mobile_number,
+        school_name=school.name,
+        school_address=school.address,
+        )
+
+
+# Get all teachers
+@router.get("/teachers")
+def read_teachers(db: Session = Depends(get_db)):
+    teachers = db.query(Teacher).join(User).join(School).all()
+    all_teachers = []
+    for db_teacher in teachers:
+        user = db.query(User).filter(User.id == db_teacher.user_id).first()
+        school = db.query(School).filter(School.id == db_teacher.school_id).first()
+        all_teachers.append(TeacherDetails(
+            id=db_teacher.id,
+            username=user.username,
+            name=user.name,
+            email=user.email,
+            mobile_number = db_teacher.mobile_number,
+            school_name=school.name,
+            school_address=school.address,
+            )) 
+    return all_teachers
+
+
+# Update a teacher by ID
+@router.put("/teachers/{teacher_id}")
+def update_teacher(teacher_id: int, teacher: schemas.TeacherCreate, db: Session = Depends(get_db)):
+    db_teacher = db.query(models.Teacher).filter(models.Teacher.id == teacher_id).first()
+    if not db_teacher:
+        return None
+    update_data = teacher.dict(exclude_unset=True)
+    for key, value in update_data.items():
+        setattr(db_teacher, key, value)
+    db_user = get_user_by_id(db, db_teacher.user_id)
+    if db_user:
+        db_user.email = teacher.email
+        db_user.name = teacher.name
+        db_user.username = teacher.username
+        db.commit()
+    db.commit()
+    db.refresh(db_teacher)
+    return {"message":"Teacher Updated Successfully"}
+
+
+# Delete a teacher by ID
+@router.delete("/teachers/{teacher_id}")
+def delete_teacher(teacher_id: int, db: Session = Depends(get_db)):
+    db_teacher = db.query(models.Teacher).filter(models.Teacher.id == teacher_id).first()
+    if not db_teacher:
+        return None
+    # Delete associated user
+    db_user = get_user_by_id(db, db_teacher.user_id)
+    if db_user:
+        db.delete(db_user)
+    db.delete(db_teacher)
+    db.commit()
+    return {'message': 'Teacher Deleted'}
 
 
 #CRUD API for Personal Development Areas
@@ -217,6 +368,12 @@ def delete_school(school_id: int, db: Session = Depends(get_db)):
     db.delete(school)
     db.commit()
     return {"message": "School deleted successfully"}
+
+
+
+
+
+
 
 
 app.include_router(router)
