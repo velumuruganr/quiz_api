@@ -75,16 +75,10 @@ def get_password_hash(password: str):
 
 
 # Create access token
-def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
+def create_access_token(data: dict):
     to_encode = data.copy()
-    if expires_delta:
-        expire = datetime.utcnow() + expires_delta
-    else:
-        expire = datetime.utcnow() + timedelta(minutes=15)
-    to_encode.update({"exp": expire})
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt
-
 
 
 # OAuth2 authentication
@@ -110,10 +104,8 @@ def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depend
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid username or password")
 
     # Generate access token
-    access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_access_token(
         data={"sub": db_user.username, "role": db_user.role},
-        expires_delta=access_token_expires
     )
     return {"access_token": access_token, "token_type": "bearer", "role":db_user.role}
 
@@ -218,6 +210,15 @@ def read_teacher(teacher_id: int, db: Session = Depends(get_db)):
         school_address=school.address,
         )
 
+
+@router.get("/profile")
+def get_profile(token:str, db: Session = Depends(get_db)):
+    username = get_username(token)
+    user = db.query(User).filter(User.id == username.sub)
+    return {
+        "name":user.name,
+        "email":user.email,
+    }
 
 # Get all teachers
 @router.get("/teachers")
