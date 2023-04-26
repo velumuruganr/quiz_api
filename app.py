@@ -237,6 +237,8 @@ def create_user(user: UserRequest, db: Session = Depends(get_db)):
 # Create a new teacher
 @router.post("/teachers")
 def create_teacher(teacher: schemas.TeacherCreate, db: Session = Depends(get_db)):
+    if teacher.password != teacher.confirm_password:
+        raise HTTPException(status_code=404, detail="Password and Confirm Password not Matching")
     hashed_password = get_password_hash(teacher.password)
     db_user = models.User(
         email=teacher.email,
@@ -248,15 +250,25 @@ def create_teacher(teacher: schemas.TeacherCreate, db: Session = Depends(get_db)
     db.add(db_user)
     db.commit()
     db.refresh(db_user)
+    school = db.query(School).filter(School.name == teacher.school_name).first()
     db_teacher = models.Teacher(
         mobile_number=teacher.mobile_number,
         user_id=db_user.id,
-        school_id=teacher.school_id
+        school_id=school.id
     )
     db.add(db_teacher)
     db.commit()
     db.refresh(db_teacher)
-    return {"message":"Teacher Created Successfully"}
+    
+    return TeacherDetails(
+        id=db_teacher.id,
+        username=db_user.username,
+        name=db_user.name,
+        email=db_user.email,
+        mobile_number = db_teacher.mobile_number,
+        school_name=school.name,
+        school_address=school.address,
+        )
 
 
 def get_user_by_id(db: Session, user_id: int):
