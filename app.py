@@ -240,6 +240,9 @@ def create_teacher(teacher: schemas.TeacherCreate, db: Session = Depends(get_db)
     if teacher.password != teacher.confirm_password:
         raise HTTPException(status_code=404, detail="Password and Confirm Password not Matching")
     hashed_password = get_password_hash(teacher.password)
+    db_user = db.query(User).filter(User.username == teacher.username).first()
+    if db_user is not None:
+        raise HTTPException(status_code=404, detail="Username already Exists")
     db_user = models.User(
         email=teacher.email,
         name=teacher.name,

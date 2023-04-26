@@ -52,7 +52,7 @@ class TeacherBase(BaseModel):
     mobile_number : str
 
 class TeacherCreate(TeacherBase):
-    school_name: int
+    school_name: str
     username: str
     name: str
     email: str
