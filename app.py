@@ -11,6 +11,9 @@ from datetime import datetime, timedelta
 from dotenv import load_dotenv
 from urllib.parse import quote_plus
 from fastapi.middleware.cors import CORSMiddleware
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+import smtplib
 
 from models import PersonalDevelopmentArea, School, Teacher, User
 from schemas import JWTUser, PasswordUpdateRequest, SchoolCreate, SchoolResponse, SchoolUpdate, TeacherDetails, UserRequest
@@ -135,6 +138,43 @@ async def update_password(request: PasswordUpdateRequest, db: Session = Depends(
     
     return {"message": "Password updated successfully"}
 
+
+@app.post('/forget-password')
+def forget_password(email: str, db: Session = Depends(get_db)):
+    db_user = db.query(User).filter(User.email == email).first()
+        # Check if the email address is valid
+    if not db_user:
+        raise HTTPException(status_code=404, detail="User not found")
+    # Generate a unique token for the user
+    token = generate_token(db_user.id)
+
+    # Update user database with token and token expiry time
+    update_user_token(db_user.id, token, datetime.datetime.now() + datetime.timedelta(hours=1))
+
+    # Create email message
+    msg = MIMEMultipart()
+    msg['From'] = os.environ['email']
+    msg['To'] = email
+    msg['Subject'] = 'Reset Password'
+
+    # Create HTML message
+    html = f"<p>Hi {db_user.name},</p>"
+    html += "<p>You have requested to reset your password. Please click on the link below to reset your password:</p>"
+    html += f"<a href='https://your_website/reset-password/{token}'>https://your_website/reset-password/{token}</a>"
+    html += "<p>This link will expire in one hour.</p>"
+    msg.attach(MIMEText(html, 'html'))
+
+    # Connect to SMTP server and send email
+    try:
+        server = smtplib.SMTP('smtp.gmail.com', 587)
+        server.starttls()
+        server.login('your_email_address', 'your_email_password')
+        server.sendmail('your_email_address', email, msg.as_string())
+        server.quit()
+    except:
+        raise HTTPException(status_code=500, detail="Failed to send email")
+
+    return {"message": "Reset password email sent"}
 
 # create user endpoint
 @app.post("/users")
