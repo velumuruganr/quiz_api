@@ -1,4 +1,4 @@
-from sqlalchemy import Column, ForeignKey, Integer, String, Enum as EnumColumn
+from sqlalchemy import Column, ForeignKey, Integer, String, Enum as EnumColumn, DateTime
 from enum import Enum
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
@@ -21,7 +21,9 @@ class User(Base):
     email = Column(String(255), unique=True)
     name = Column(String(255))
     password = Column(String(255))
-    role = Column(EnumColumn(UserRole))   
+    role = Column(EnumColumn(UserRole))
+    password_reset_token = Column(String(35))
+    password_reset_token_created_at = Column(DateTime)
     
     teacher = relationship("Teacher", back_populates="user")
 

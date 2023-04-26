@@ -14,7 +14,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 import smtplib
-
+import secrets
+import datetime
 from models import PersonalDevelopmentArea, School, Teacher, User
 from schemas import JWTUser, PasswordUpdateRequest, SchoolCreate, SchoolResponse, SchoolUpdate, TeacherDetails, UserRequest
 import schemas
@@ -24,6 +25,7 @@ import uvicorn
 # Load environment variables from .env file
 load_dotenv()
 
+BASE_URL = os.environ.get("BASE_URL")
 
 # Get database details from environment variables
 DB_NAME = os.environ.get("DB_NAME")
@@ -32,7 +34,8 @@ DB_PASSWORD = quote_plus(os.environ.get("DB_PASSWORD"))
 DB_HOST = os.environ.get("DB_HOST")
 DB_PORT = os.environ.get("DB_PORT")
 
-
+SMTP_EMAIL = os.environ.get("SMTP_EMAIL")
+SMTP_PASSWORD = os.environ.get("SMTP_PASSWORD")
 
 # JWT configuration
 SECRET_KEY = "secret_key"
@@ -139,6 +142,45 @@ async def update_password(request: PasswordUpdateRequest, db: Session = Depends(
     return {"message": "Password updated successfully"}
 
 
+# Generate token
+def generate_token(length=32):
+    return secrets.token_hex(length)
+
+
+# Update user token
+def update_user_token(user_id: int, token: str, db: Session = Depends(get_db)):
+    user = db.query(models.User).filter(models.User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+    user.password_reset_token = token
+    user.password_reset_token_created_at = datetime.datetime.utcnow()
+    db.commit()
+
+
+# Check if token is valid
+def is_token_valid(user: models.User, token: str) -> bool:
+    if not user.password_reset_token or not user.password_reset_token_created_at:
+        return False
+
+    elapsed_time = datetime.datetime.utcnow() - user.password_reset_token_created_at
+    if elapsed_time > datetime.timedelta(minutes=60):
+        return False
+
+    return user.password_reset_token == token
+
+@app.post("/reset-password")
+def reset_password(reset_token: str, new_password: str, db: Session = Depends(get_db)):
+    db_user = db.query(models.User).filter(models.User.password_reset_token == reset_token).first()
+    if db_user is None or not is_token_valid(db_user, reset_token):
+        raise HTTPException(status_code=404, detail="Invalid Token")
+    hashed_password = get_password_hash(new_password)
+    db_user.password = hashed_password
+    db_user.password_reset_token = None
+    db_user.password_reset_token_created_at = None
+    db.add(db_user)
+    db.commit()
+    return {"message": "Password updated successfully"}
+
 @app.post('/forget-password')
 def forget_password(email: str, db: Session = Depends(get_db)):
     db_user = db.query(User).filter(User.email == email).first()
@@ -146,21 +188,21 @@ def forget_password(email: str, db: Session = Depends(get_db)):
     if not db_user:
         raise HTTPException(status_code=404, detail="User not found")
     # Generate a unique token for the user
-    token = generate_token(db_user.id)
+    token = generate_token()
 
     # Update user database with token and token expiry time
-    update_user_token(db_user.id, token, datetime.datetime.now() + datetime.timedelta(hours=1))
+    update_user_token(db_user.id, token)
 
     # Create email message
     msg = MIMEMultipart()
-    msg['From'] = os.environ['email']
+    msg['From'] = SMTP_EMAIL
     msg['To'] = email
     msg['Subject'] = 'Reset Password'
 
     # Create HTML message
     html = f"<p>Hi {db_user.name},</p>"
     html += "<p>You have requested to reset your password. Please click on the link below to reset your password:</p>"
-    html += f"<a href='https://your_website/reset-password/{token}'>https://your_website/reset-password/{token}</a>"
+    html += f"<a href='{BASE_URL}/reset-password/{token}'>{BASE_URL}/reset-password/{token}</a>"
     html += "<p>This link will expire in one hour.</p>"
     msg.attach(MIMEText(html, 'html'))
 
@@ -168,8 +210,8 @@ def forget_password(email: str, db: Session = Depends(get_db)):
     try:
         server = smtplib.SMTP('smtp.gmail.com', 587)
         server.starttls()
-        server.login('your_email_address', 'your_email_password')
-        server.sendmail('your_email_address', email, msg.as_string())
+        server.login(SMTP_EMAIL, SMTP_PASSWORD)
+        server.sendmail(SMTP_EMAIL, email, msg.as_string())
         server.quit()
     except:
         raise HTTPException(status_code=500, detail="Failed to send email")
