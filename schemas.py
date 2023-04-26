@@ -47,19 +47,14 @@ class PasswordUpdateRequest(BaseModel):
     new_password : str
     
     
-#Teacher Schema
-class TeacherBase(BaseModel):
-    mobile_number : str
-
-class TeacherCreate(TeacherBase):
-    school_name: int
+class TeacherCreate(BaseModel):
+    school_name: str
     username: str
-    name: str
     email: str
     password: str
     confirm_password: str
 
-class Teacher(TeacherBase):
+class Teacher(BaseModel):
     id: int
     school_id: int
     user_id: int
