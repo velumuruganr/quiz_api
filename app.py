@@ -35,7 +35,7 @@ DB_HOST = os.environ.get("DB_HOST")
 DB_PORT = os.environ.get("DB_PORT")
 
 SMTP_EMAIL = os.environ.get("SMTP_EMAIL")
-SMTP_PASSWORD = os.environ.get("SMTP_PASSWORD")
+SMTP_PASSWORD = quote_plus(os.environ.get("SMTP_PASSWORD"))
 
 # JWT configuration
 SECRET_KEY = "secret_key"
@@ -148,7 +148,7 @@ def generate_token(length=32):
 
 
 # Update user token
-def update_user_token(user_id: int, token: str, db: Session = Depends(get_db)):
+def update_user_token(user_id: int, token: str, db: Session):
     user = db.query(models.User).filter(models.User.id == user_id).first()
     if not user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
@@ -191,11 +191,11 @@ def forget_password(email: str, db: Session = Depends(get_db)):
     token = generate_token()
 
     # Update user database with token and token expiry time
-    update_user_token(db_user.id, token)
+    update_user_token(db_user.id, token, db)
 
     # Create email message
     msg = MIMEMultipart()
-    msg['From'] = SMTP_EMAIL
+    msg['From'] = "One Decision Quiz"
     msg['To'] = email
     msg['Subject'] = 'Reset Password'
 
@@ -213,8 +213,8 @@ def forget_password(email: str, db: Session = Depends(get_db)):
         server.login(SMTP_EMAIL, SMTP_PASSWORD)
         server.sendmail(SMTP_EMAIL, email, msg.as_string())
         server.quit()
-    except:
-        raise HTTPException(status_code=500, detail="Failed to send email")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to send email Error:{e}")
 
     return {"message": "Reset password email sent"}
 
