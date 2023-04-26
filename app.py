@@ -240,9 +240,11 @@ def create_teacher(teacher: schemas.TeacherCreate, db: Session = Depends(get_db)
     if teacher.password != teacher.confirm_password:
         raise HTTPException(status_code=404, detail="Password and Confirm Password not Matching")
     hashed_password = get_password_hash(teacher.password)
+    db_user = db.query(User).filter(User.username == teacher.username).first()
+    if db_user is not None:
+        raise HTTPException(status_code=404, detail="Username already Exists")
     db_user = models.User(
         email=teacher.email,
-        name=teacher.name,
         username=teacher.username,
         password=hashed_password,
         role="teacher"
@@ -252,7 +254,6 @@ def create_teacher(teacher: schemas.TeacherCreate, db: Session = Depends(get_db)
     db.refresh(db_user)
     school = db.query(School).filter(School.name == teacher.school_name).first()
     db_teacher = models.Teacher(
-        mobile_number=teacher.mobile_number,
         user_id=db_user.id,
         school_id=school.id
     )
@@ -263,9 +264,7 @@ def create_teacher(teacher: schemas.TeacherCreate, db: Session = Depends(get_db)
     return TeacherDetails(
         id=db_teacher.id,
         username=db_user.username,
-        name=db_user.name,
         email=db_user.email,
-        mobile_number = db_teacher.mobile_number,
         school_name=school.name,
         school_address=school.address,
         )
@@ -297,9 +296,7 @@ def read_teacher(teacher_id: int, db: Session = Depends(get_db)):
     return TeacherDetails(
         id=db_teacher.id,
         username=user.username,
-        name=user.name,
         email=user.email,
-        mobile_number = db_teacher.mobile_number,
         school_name=school.name,
         school_address=school.address,
         )
@@ -310,7 +307,7 @@ def get_profile(token:str, db: Session = Depends(get_db)):
     username = get_username(token)
     user = db.query(User).filter(User.id == username.sub)
     return {
-        "name":user.name,
+        "username":user.username,
         "email":user.email,
     }
 
@@ -325,9 +322,7 @@ def read_teachers(db: Session = Depends(get_db)):
         all_teachers.append(TeacherDetails(
             id=db_teacher.id,
             username=user.username,
-            name=user.name,
             email=user.email,
-            mobile_number = db_teacher.mobile_number,
             school_name=school.name,
             school_address=school.address,
             )) 
@@ -346,7 +341,6 @@ def update_teacher(teacher_id: int, teacher: schemas.TeacherCreate, db: Session 
     db_user = get_user_by_id(db, db_teacher.user_id)
     if db_user:
         db_user.email = teacher.email
-        db_user.name = teacher.name
         db_user.username = teacher.username
         db.commit()
     db.commit()

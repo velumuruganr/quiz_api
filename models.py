@@ -19,7 +19,6 @@ class User(Base):
     id = Column(Integer, primary_key=True, index=True)
     username = Column(String(255), unique=True, index=True)
     email = Column(String(255), unique=True)
-    name = Column(String(255))
     password = Column(String(255))
     role = Column(EnumColumn(UserRole))
     password_reset_token = Column(String(35))
@@ -46,7 +45,6 @@ class School(Base):
 class Teacher(Base):
     __tablename__ = "teachers"
     id = Column(Integer, primary_key=True, index=True)
-    mobile_number = Column(String, unique=True, index=True)
     school_id = Column(Integer, ForeignKey("schools.id"), nullable=False)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     

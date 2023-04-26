@@ -28,4 +28,4 @@ CREATE TABLE teachers (
   FOREIGN KEY (user_id) REFERENCES users (id)
 );
 
-ALTER TABLE users ADD password_rest_token VARCHAR(35), ADD password_reset_token_created_at DATETIME DEFAULT NULL;
+ALTER TABLE users ADD password_reset_token VARCHAR(35), ADD password_reset_token_created_at DATETIME DEFAULT NULL;

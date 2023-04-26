@@ -64,15 +64,12 @@ class Teacher(BaseModel):
 
 class TeacherDetails(BaseModel):
     id:int
-    name: str
     username: str
     email: str
-    mobile_number: str
     school_name: str
     school_address: str
     
     
 class Proile(BaseModel):
-    name:str
+    username:str
     email: str
-    mobile_number: str
