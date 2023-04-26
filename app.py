@@ -462,7 +462,7 @@ def delete_school(school_id: int, db: Session = Depends(get_db)):
 app.include_router(router)
 
 def main():
-    uvicorn.run(app, port=8000, host="0.0.0.0")
+    uvicorn.run(app, port=8000)
     
 if __name__ == "__main__":
     main()
