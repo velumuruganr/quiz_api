@@ -1,4 +1,4 @@
-from sqlalchemy import Column, ForeignKey, Integer, String, Enum as EnumColumn, DateTime
+from sqlalchemy import Boolean, Column, ForeignKey, Integer, String, Enum as EnumColumn, DateTime
 from enum import Enum
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
@@ -50,3 +50,52 @@ class Teacher(Base):
     
     school = relationship("School", back_populates="teachers")
     user = relationship("User", back_populates="teacher")
+
+class Test(Base):
+    __tablename__ = "tests"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, index=True)
+
+    questions = relationship("Question", back_populates="test")
+    
+class Question(Base):
+    __tablename__ = "questions"
+
+    id = Column(Integer, primary_key=True, index=True)
+    question_text = Column(String)
+    
+    test_id = Column(Integer, ForeignKey("tests.id"))
+    
+    choices = relationship("Choice", back_populates="question")
+    answers = relationship("Answer", back_populates="question")
+    test = relationship("Test", back_populates="questions")
+    
+class Choice(Base):
+    __tablename__ = "choices"
+
+    id = Column(Integer, primary_key=True, index=True)
+    text = Column(String)
+    
+    question_id = Column(Integer, ForeignKey("questions.id"))
+    
+    question = relationship("Question", back_populates="choices")
+    
+class Answer(Base):
+    __tablename__ = "answers"
+
+    id = Column(Integer, primary_key=True, index=True)
+    is_correct = Column(Boolean, default=False)
+    question_id = Column(Integer, ForeignKey("questions.id"))
+    student_id = Column(Integer, ForeignKey("students.id"))
+    question = relationship("Question", back_populates="answers")
+    student = relationship("Student", back_populates="answers")
+
+
+class Student(Base):
+    __tablename__ = "students"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, index=True)
+    email = Column(String, index=True)
+    answers = relationship("Answer", back_populates="student")

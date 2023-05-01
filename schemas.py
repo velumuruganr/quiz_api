@@ -1,3 +1,4 @@
+from typing import List, Optional
 from pydantic import BaseModel
 from models import UserRole
 
@@ -16,8 +17,8 @@ class SchoolCreate(BaseModel):
 
 # create a Pydantic model for the request body to update an existing school
 class SchoolUpdate(BaseModel):
-    name: str = None
-    address: str = None
+    name: Optional[str]
+    address: Optional[str]
 
     # define a method to iterate over the fields of the model
     def __iter__(self):
@@ -69,7 +70,68 @@ class TeacherDetails(BaseModel):
     school_name: str
     school_address: str
     
-    
-class Proile(BaseModel):
+# Schemas for Test
+
+class TestQuestionChoiceCreate(BaseModel):
+    choice_text: str
+    is_answer: bool
+
+
+class TestQuestionCreate(BaseModel):
+    question_text: str
+    choices: List[TestQuestionChoiceCreate]
+
+
+class TestCreate(BaseModel):
+    name: str
+    questions: List[TestQuestionCreate]
+
+
+class TestQuestionChoice(BaseModel):
+    id: int
+    choice_text: str
+    is_answer: bool
+
+    class Config:
+        orm_mode = True
+
+
+class TestQuestion(BaseModel):
+    id: int
+    question_text: str
+    choices: List[TestQuestionChoice]
+
+    class Config:
+        orm_mode = True
+
+
+class Test(BaseModel):
+    id: int
+    name: str
+    questions: List[TestQuestion]
+
+    class Config:
+        orm_mode = True
+
+
+# Schemas for Test Result
+
+class TestResultCreate(BaseModel):
+    test_id: int
+    student_id: int
+    answers: List[int]
+
+
+# class TestResult(BaseModel):
+#     id: int
+#     test: Test
+#     student: User
+#     answers: List[int]
+#     score: float
+
+#     class Config:
+#         orm_mode = True
+            
+class Profile(BaseModel):
     username:str
     email: str
