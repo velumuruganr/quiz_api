@@ -6,7 +6,6 @@ from models import UserRole
 class UserRequest(BaseModel):
     username: str
     email: str
-    name: str
     password: str
     role: UserRole
     
@@ -69,6 +68,7 @@ class TeacherDetails(BaseModel):
     email: str
     school_name: str
     school_address: str
+    
     
 # Schemas for Test
 
@@ -135,3 +135,10 @@ class TestResultCreate(BaseModel):
 class Profile(BaseModel):
     username:str
     email: str
+
+class ForgetPasswordRequest(BaseModel):
+    email: str
+
+class ResetPasswordRequest(BaseModel):
+    reset_token: str
+    new_password:str
