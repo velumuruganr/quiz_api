@@ -215,11 +215,22 @@ class ResultCreate(BaseModel):
 #     is_correct: bool
 
 
+class Answer(BaseModel):
+    id:int
+    total_choices: int
+    correctly_answered: int
+    mark: int
+    question: TestQuestion
+
+    class Config:
+        orm_mode = True
+
 # create a Pydantic model for the response body representing a student
 class Result(BaseModel):
     id: int
     total_questions: int
     correctly_answered: int
+    answers = Answer
     student: Student
     test: Test
     # answers: List[ResultAnswers]

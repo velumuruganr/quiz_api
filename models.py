@@ -1,4 +1,4 @@
-from sqlalchemy import Boolean, Column, ForeignKey, Integer, String, Enum as EnumColumn, DateTime, Table
+from sqlalchemy import Column, ForeignKey, Integer, String, Enum as EnumColumn, DateTime
 from enum import Enum
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
@@ -45,8 +45,8 @@ class PersonalDevelopmentArea(Base):
 class School(Base):
     __tablename__ = "schools"
     id = Column(Integer, primary_key=True, index=True)
-    name = Column(String, index=True)
-    address = Column(String, index=True)
+    name = Column(String(50), index=True)
+    address = Column(String(255), index=True)
     
     teachers = relationship("Teacher", back_populates="school")
     students = relationship("Student", back_populates="school")
