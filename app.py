@@ -169,7 +169,7 @@ def is_token_valid(user: models.User, token: str) -> bool:
     return user.password_reset_token == token
 
 @app.post("/reset-password")
-def reset_password(reset_token: str, new_password: str, db: Session = Depends(get_db)):
+def reset_password({reset_token: str, new_password: str}, db: Session = Depends(get_db)):
     db_user = db.query(models.User).filter(models.User.password_reset_token == reset_token).first()
     if db_user is None or not is_token_valid(db_user, reset_token):
         raise HTTPException(status_code=404, detail="Invalid Token")
