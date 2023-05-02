@@ -460,11 +460,66 @@ def delete_school(school_id: int, db: Session = Depends(get_db)):
     return {"message": "School deleted successfully"}
 
 
+#CRUD for tests
+
+#create a new test
+
+@router.post("/tests/", response_model=schemas.Test)
+def create_test(test: schemas.TestCreate, db: Session = Depends(get_db)):
+    db_test = models.Test(name=test.name, teacher_id=test.teacher_id)
+    db.add(db_test)
+    db.commit()
+    db.refresh(db_test)
+    for question in test.questions:
+        db_question = models.Question(question_text=question.question_text, test_id=db_test.id)
+        db.add(db_question)
+        db.commit()
+        db.refresh(db_question)
+        for choice in question.choices:
+            db_choice = models.Choice(text=choice.text,is_correct=choice.is_correct, question_id=db_question.id)
+            db.add(db_choice)
+            db.commit()
+            db.refresh(db_choice)
+    return db_test
 
 
+@router.get("/tests/", response_model=List[schemas.Test])
+def read_tests(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
+    tests = db.query(models.Test).offset(skip).limit(limit).all()
+    return tests
 
 
+@router.get("/tests/{test_id}", response_model=schemas.TestDetail)
+def read_test(test_id: int, db: Session = Depends(get_db)):
+    test = db.query(models.Test).filter(models.Test.id == test_id).first()
+    if not test:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Test not found")
+    return test
 
+
+@router.put("/tests/{test_id}", response_model=schemas.Test)
+def update_test(test_id: int, test: schemas.TestUpdate, db: Session = Depends(get_db)):
+    db_test = db.query(models.Test).filter(models.Test.id == test_id).first()
+    if not db_test:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Test not found")
+    db_test.title = test.title
+    db_test.description = test.description
+    db_test.duration = test.duration
+    db_test.start_time = test.start_time
+    db_test.end_time = test.end_time
+    db.commit()
+    db.refresh(db_test)
+    return db_test
+
+
+@router.delete("/tests/{test_id}")
+def delete_test(test_id: int, db: Session = Depends(get_db)):
+    db_test = db.query(models.Test).filter(models.Test.id == test_id).first()
+    if not db_test:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Test not found")
+    db.delete(db_test)
+    db.commit()
+    return {"detail": "Test deleted"}@app.route('/test', methods=['POST'])
 
 app.include_router(router)
 
