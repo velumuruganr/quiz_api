@@ -169,11 +169,11 @@ def is_token_valid(user: models.User, token: str) -> bool:
     return user.password_reset_token == token
 
 @app.post("/reset-password")
-def reset_password(reset_token: str, new_password: str, db: Session = Depends(get_db)):
-    db_user = db.query(models.User).filter(models.User.password_reset_token == reset_token).first()
-    if db_user is None or not is_token_valid(db_user, reset_token):
+def reset_password(request: schemas.ResetPasswordRequest, db: Session = Depends(get_db)):
+    db_user = db.query(models.User).filter(models.User.password_reset_token == request.reset_token).first()
+    if db_user is None or not is_token_valid(db_user, request.reset_token):
         raise HTTPException(status_code=404, detail="Invalid Token")
-    hashed_password = get_password_hash(new_password)
+    hashed_password = get_password_hash(request.new_password)
     db_user.password = hashed_password
     db_user.password_reset_token = None
     db_user.password_reset_token_created_at = None
@@ -182,8 +182,8 @@ def reset_password(reset_token: str, new_password: str, db: Session = Depends(ge
     return {"message": "Password updated successfully"}
 
 @app.post('/forget-password')
-def forget_password(email: str, db: Session = Depends(get_db)):
-    db_user = db.query(User).filter(User.email == email).first()
+def forget_password(request: schemas.ForgetPasswordRequest, db: Session = Depends(get_db)):
+    db_user = db.query(User).filter(User.email == request.email).first()
         # Check if the email address is valid
     if not db_user:
         raise HTTPException(status_code=404, detail="User not found")
@@ -196,13 +196,13 @@ def forget_password(email: str, db: Session = Depends(get_db)):
     # Create email message
     msg = MIMEMultipart()
     msg['From'] = "One Decision Quiz"
-    msg['To'] = email
+    msg['To'] = request.email
     msg['Subject'] = 'Reset Password'
 
     # Create HTML message
-    html = f"<p>Hi {db_user.name},</p>"
+    html = f"<p>Hi {db_user.username},</p>"
     html += "<p>You have requested to reset your password. Please click on the link below to reset your password:</p>"
-    html += f"<a href='{BASE_URL}/reset-password/{token}'>{BASE_URL}/reset-password/{token}</a>"
+    html += f"<a href='{BASE_URL}updatePassword/{token}'>{BASE_URL}updatePassword/{token}</a>"
     html += "<p>This link will expire in one hour.</p>"
     msg.attach(MIMEText(html, 'html'))
 
@@ -211,7 +211,7 @@ def forget_password(email: str, db: Session = Depends(get_db)):
         server = smtplib.SMTP('smtp.gmail.com', 587)
         server.starttls()
         server.login(SMTP_EMAIL, SMTP_PASSWORD)
-        server.sendmail(SMTP_EMAIL, email, msg.as_string())
+        server.sendmail(SMTP_EMAIL, request.email, msg.as_string())
         server.quit()
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to send email Error:{e}")
@@ -305,11 +305,12 @@ def read_teacher(teacher_id: int, db: Session = Depends(get_db)):
 @router.get("/profile")
 def get_profile(token:str, db: Session = Depends(get_db)):
     username = get_username(token)
-    user = db.query(User).filter(User.id == username.sub)
-    return {
-        "username":user.username,
-        "email":user.email,
-    }
+    user = db.query(User).filter(User.username == username.sub).first()
+    if user:
+        return {
+            "username":user.username,
+            "email":user.email,
+        }
 
 # Get all teachers
 @router.get("/teachers")
