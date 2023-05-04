@@ -50,14 +50,17 @@ class Teacher(Base):
     
     school = relationship("School", back_populates="teachers")
     user = relationship("User", back_populates="teacher")
+    tests = relationship("Test", back_populates="teacher")
 
 class Test(Base):
     __tablename__ = "tests"
 
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, index=True)
+    teacher_id = Column(Integer, ForeignKey("teachers.id"), nullable=False)
 
     questions = relationship("Question", back_populates="test")
+    teacher = relationship("Teacher",back_populates="tests")
     
 class Question(Base):
     __tablename__ = "questions"
@@ -75,7 +78,8 @@ class Choice(Base):
     __tablename__ = "choices"
 
     id = Column(Integer, primary_key=True, index=True)
-    text = Column(String)
+    choice_text = Column(String)
+    is_correct = Column(Boolean, default=False)
     
     question_id = Column(Integer, ForeignKey("questions.id"))
     

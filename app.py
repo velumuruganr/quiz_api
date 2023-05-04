@@ -195,7 +195,7 @@ def forget_password(request: schemas.ForgetPasswordRequest, db: Session = Depend
 
     # Create email message
     msg = MIMEMultipart()
-    msg['From'] = "One Decision Quiz"
+    msg['From'] = "1Decision"
     msg['To'] = request.email
     msg['Subject'] = 'Reset Password'
 
@@ -208,7 +208,7 @@ def forget_password(request: schemas.ForgetPasswordRequest, db: Session = Depend
 
     # Connect to SMTP server and send email
     try:
-        server = smtplib.SMTP('smtp.gmail.com', 587)
+        server = smtplib.SMTP('pro.turbo-smtp.com', 587)
         server.starttls()
         server.login(SMTP_EMAIL, SMTP_PASSWORD)
         server.sendmail(SMTP_EMAIL, request.email, msg.as_string())
@@ -216,7 +216,7 @@ def forget_password(request: schemas.ForgetPasswordRequest, db: Session = Depend
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to send email Error:{e}")
 
-    return {"message": "Reset password email sent"}
+    return {"message": "Reset password email sent", "status":200}
 
 # create user endpoint
 @app.post("/users")
@@ -476,7 +476,7 @@ def create_test(test: schemas.TestCreate, db: Session = Depends(get_db)):
         db.commit()
         db.refresh(db_question)
         for choice in question.choices:
-            db_choice = models.Choice(text=choice.text,is_correct=choice.is_correct, question_id=db_question.id)
+            db_choice = models.Choice(choice_text=choice.choice_text,is_correct=choice.is_correct, question_id=db_question.id)
             db.add(db_choice)
             db.commit()
             db.refresh(db_choice)
@@ -489,7 +489,7 @@ def read_tests(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
     return tests
 
 
-@router.get("/tests/{test_id}", response_model=schemas.TestDetail)
+@router.get("/tests/{test_id}", response_model=schemas.Test)
 def read_test(test_id: int, db: Session = Depends(get_db)):
     test = db.query(models.Test).filter(models.Test.id == test_id).first()
     if not test:
@@ -502,11 +502,37 @@ def update_test(test_id: int, test: schemas.TestUpdate, db: Session = Depends(ge
     db_test = db.query(models.Test).filter(models.Test.id == test_id).first()
     if not db_test:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Test not found")
-    db_test.title = test.title
-    db_test.description = test.description
-    db_test.duration = test.duration
-    db_test.start_time = test.start_time
-    db_test.end_time = test.end_time
+    db_test.name = test.name
+    for question in test.questions:
+        db_question = db.query(models.Question).filter(models.Question.id==question.id).first()
+        db_question.question_text=question.question_text
+        db.commit()
+        db.refresh(db_question)
+        for choice in question.choices:
+            db_choice = db.query(models.Choice).filter(models.Choice.id==choice.id).first()
+            db_choice.choice_text=choice.choice_text
+            db_choice.is_correct=choice.is_correct
+            db.commit()
+            db.refresh(db_choice)
+        if question.new_choices:
+            for choice in question.new_choices:
+                db_choice = models.Choice(choice_text=choice.choice_text,is_correct=choice.is_correct, question_id=question.id)
+                db.add(db_choice)
+                db.commit()
+                db.refresh(db_choice)
+    if test.new_questions:
+        for question in test.new_questions:
+            db_question = models.Question(question_text=question.question_text, test_id=test_id)
+            db.add(db_question)
+            db.commit()
+            db.refresh(db_question)
+            for choice in question.choices:
+                db_choice = models.Choice(choice_text=choice.choice_text,is_correct=choice.is_correct, question_id=db_question.id)
+                db.add(db_choice)
+                db.commit()
+                db.refresh(db_choice)
+    
+    
     db.commit()
     db.refresh(db_test)
     return db_test
@@ -517,9 +543,18 @@ def delete_test(test_id: int, db: Session = Depends(get_db)):
     db_test = db.query(models.Test).filter(models.Test.id == test_id).first()
     if not db_test:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Test not found")
+    
+    db_question = db.query(models.Question).filter(models.Question.test_id == test_id).all()
+    
+    for question in db_question:
+        db.query(models.Choice).filter(models.Choice.question_id == question.id).delete()
+        
+    db.query(models.Question).filter(models.Question.test_id == test_id).delete()
+    
     db.delete(db_test)
     db.commit()
-    return {"detail": "Test deleted"}@app.route('/test', methods=['POST'])
+    return {"detail": "Test deleted"}
+
 
 app.include_router(router)
 

@@ -62,6 +62,7 @@ class Teacher(BaseModel):
     class Config:
         orm_mode = True
 
+
 class TeacherDetails(BaseModel):
     id:int
     username: str
@@ -74,7 +75,13 @@ class TeacherDetails(BaseModel):
 
 class TestQuestionChoiceCreate(BaseModel):
     choice_text: str
-    is_answer: bool
+    is_correct: bool
+
+
+class TestQuestionChoiceUpdate(BaseModel):
+    id: int
+    choice_text: str
+    is_correct: bool
 
 
 class TestQuestionCreate(BaseModel):
@@ -82,15 +89,30 @@ class TestQuestionCreate(BaseModel):
     choices: List[TestQuestionChoiceCreate]
 
 
+class TestQuestionUpdate(BaseModel):
+    id: int
+    question_text: str
+    choices: List[TestQuestionChoiceUpdate]
+    new_choices: Optional[List[TestQuestionChoiceCreate]]
+
+
 class TestCreate(BaseModel):
     name: str
+    teacher_id : int
     questions: List[TestQuestionCreate]
 
 
+class TestUpdate(BaseModel):
+    id: int
+    name: str
+    questions: List[TestQuestionUpdate]
+    new_questions: Optional[List[TestQuestionCreate]]
+    
+    
 class TestQuestionChoice(BaseModel):
     id: int
     choice_text: str
-    is_answer: bool
+    is_correct: bool
 
     class Config:
         orm_mode = True

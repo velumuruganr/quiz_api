@@ -29,3 +29,9 @@ CREATE TABLE teachers (
 );
 
 ALTER TABLE users ADD password_reset_token VARCHAR(35), ADD password_reset_token_created_at DATETIME DEFAULT NULL;
+
+CREATE TABLE tests (id INT AUTO_INCREMENT PRIMARY KEY,name VARCHAR(30), teacher_id INT , FOREIGN KEY(teacher_id) REFERENCES teachers(id));
+
+CREATE TABLE questions (id INT AUTO_INCREMENT PRIMARY KEY,question_text VARCHAR(30), test_id INT , FOREIGN KEY(test_id) REFERENCES tests(id));
+
+CREATE TABLE choices (id INT AUTO_INCREMENT PRIMARY KEY,choice_text VARCHAR(30), is_correct BOOLEAN, question_id INT , FOREIGN KEY(question_id) REFERENCES questions(id));
