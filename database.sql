@@ -30,7 +30,7 @@ CREATE TABLE teachers (
 
 ALTER TABLE users ADD password_reset_token VARCHAR(35), ADD password_reset_token_created_at DATETIME DEFAULT NULL;
 
-CREATE TABLE tests (id INT AUTO_INCREMENT PRIMARY KEY,name VARCHAR(30), teacher_id INT , FOREIGN KEY(teacher_id) REFERENCES teachers(id));
+CREATE TABLE tests (id INT AUTO_INCREMENT PRIMARY KEY,name VARCHAR(30), school_id INT , FOREIGN KEY(school_id) REFERENCES schools(id));
 
 CREATE TABLE questions (id INT AUTO_INCREMENT PRIMARY KEY,question_text VARCHAR(30), test_id INT , FOREIGN KEY(test_id) REFERENCES tests(id));
 

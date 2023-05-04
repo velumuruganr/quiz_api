@@ -40,6 +40,8 @@ class School(Base):
     address = Column(String(255), index=True)
     
     teachers = relationship("Teacher", back_populates="school")
+    tests = relationship("Test", back_populates="school")
+
     
 
 class Teacher(Base):
@@ -50,17 +52,17 @@ class Teacher(Base):
     
     school = relationship("School", back_populates="teachers")
     user = relationship("User", back_populates="teacher")
-    tests = relationship("Test", back_populates="teacher")
+
 
 class Test(Base):
     __tablename__ = "tests"
 
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, index=True)
-    teacher_id = Column(Integer, ForeignKey("teachers.id"), nullable=False)
+    school_id = Column(Integer, ForeignKey("schools.id"), nullable=False)
 
     questions = relationship("Question", back_populates="test")
-    teacher = relationship("Teacher",back_populates="tests")
+    school = relationship("School",back_populates="tests")
     
 class Question(Base):
     __tablename__ = "questions"

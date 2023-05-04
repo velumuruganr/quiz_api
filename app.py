@@ -195,7 +195,7 @@ def forget_password(request: schemas.ForgetPasswordRequest, db: Session = Depend
 
     # Create email message
     msg = MIMEMultipart()
-    msg['From'] = "1Decision"
+    msg['From'] = "1decision"
     msg['To'] = request.email
     msg['Subject'] = 'Reset Password'
 
@@ -466,7 +466,7 @@ def delete_school(school_id: int, db: Session = Depends(get_db)):
 
 @router.post("/tests/", response_model=schemas.Test)
 def create_test(test: schemas.TestCreate, db: Session = Depends(get_db)):
-    db_test = models.Test(name=test.name, teacher_id=test.teacher_id)
+    db_test = models.Test(name=test.name, school_id=test.school_id)
     db.add(db_test)
     db.commit()
     db.refresh(db_test)
@@ -520,6 +520,10 @@ def update_test(test_id: int, test: schemas.TestUpdate, db: Session = Depends(ge
                 db.add(db_choice)
                 db.commit()
                 db.refresh(db_choice)
+        if question.deleted_choices:
+            for id in deleted_choices:
+                db.query(models.Choice).filter(models.Choice.id == id).delete()
+                db.commit()
     if test.new_questions:
         for question in test.new_questions:
             db_question = models.Question(question_text=question.question_text, test_id=test_id)
@@ -531,6 +535,10 @@ def update_test(test_id: int, test: schemas.TestUpdate, db: Session = Depends(ge
                 db.add(db_choice)
                 db.commit()
                 db.refresh(db_choice)
+    if test.deleted_questions:
+        for id in deleted_questions:
+            db.query(models.Question).filter(models.Question.id == id).delete()
+            db.commit()
     
     
     db.commit()

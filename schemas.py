@@ -94,11 +94,12 @@ class TestQuestionUpdate(BaseModel):
     question_text: str
     choices: List[TestQuestionChoiceUpdate]
     new_choices: Optional[List[TestQuestionChoiceCreate]]
+    deleted_choices: Optional[List[int]]
 
 
 class TestCreate(BaseModel):
     name: str
-    teacher_id : int
+    school_id : int
     questions: List[TestQuestionCreate]
 
 
@@ -107,6 +108,8 @@ class TestUpdate(BaseModel):
     name: str
     questions: List[TestQuestionUpdate]
     new_questions: Optional[List[TestQuestionCreate]]
+    deleted_questions: Optional[List[int]]
+
     
     
 class TestQuestionChoice(BaseModel):
