@@ -9,10 +9,12 @@ class UserRequest(BaseModel):
     password: str
     role: UserRole
     
+    
 # create a Pydantic model for the request body to create a new school
 class SchoolCreate(BaseModel):
     name: str
     address: str
+
 
 # create a Pydantic model for the request body to update an existing school
 class SchoolUpdate(BaseModel):
@@ -25,6 +27,7 @@ class SchoolUpdate(BaseModel):
             value = getattr(self, field)
             if value is not None:
                 yield field, value
+
 
 # create a Pydantic model for the response body representing a school
 class SchoolResponse(BaseModel):
@@ -53,6 +56,7 @@ class TeacherCreate(BaseModel):
     email: str
     password: str
     confirm_password: str
+
 
 class Teacher(BaseModel):
     id: int
@@ -86,15 +90,17 @@ class TestQuestionChoiceUpdate(BaseModel):
 
 class TestQuestionCreate(BaseModel):
     question_text: str
+    pda_id: int
     choices: List[TestQuestionChoiceCreate]
 
 
 class TestQuestionUpdate(BaseModel):
     id: int
     question_text: str
+    pda_id: int
     choices: List[TestQuestionChoiceUpdate]
-    new_choices: Optional[List[TestQuestionChoiceCreate]]
-    deleted_choices: Optional[List[int]]
+    new_choices: List[TestQuestionChoiceCreate] | None
+    deleted_choices: List[int] | None
 
 
 class TestCreate(BaseModel):
@@ -106,9 +112,10 @@ class TestCreate(BaseModel):
 class TestUpdate(BaseModel):
     id: int
     name: str
-    questions: List[TestQuestionUpdate]
-    new_questions: Optional[List[TestQuestionCreate]]
-    deleted_questions: Optional[List[int]]
+    school_id:int
+    questions: List[TestQuestionUpdate] 
+    new_questions: List[TestQuestionCreate] | None
+    deleted_questions: List[int] | None
 
     
     
@@ -121,9 +128,18 @@ class TestQuestionChoice(BaseModel):
         orm_mode = True
 
 
+class PersonalDevelopmentArea(BaseModel):
+    id: int
+    content: str
+    
+    class Config:
+        orm_mode = True
+        
+        
 class TestQuestion(BaseModel):
     id: int
     question_text: str
+    pda: PersonalDevelopmentArea
     choices: List[TestQuestionChoice]
 
     class Config:
@@ -133,6 +149,7 @@ class TestQuestion(BaseModel):
 class Test(BaseModel):
     id: int
     name: str
+    school: SchoolResponse
     questions: List[TestQuestion]
 
     class Config:

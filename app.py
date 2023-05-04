@@ -471,7 +471,7 @@ def create_test(test: schemas.TestCreate, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(db_test)
     for question in test.questions:
-        db_question = models.Question(question_text=question.question_text, test_id=db_test.id)
+        db_question = models.Question(question_text=question.question_text,pda_id=question.pda_id, test_id=db_test.id)
         db.add(db_question)
         db.commit()
         db.refresh(db_question)
@@ -503,9 +503,11 @@ def update_test(test_id: int, test: schemas.TestUpdate, db: Session = Depends(ge
     if not db_test:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Test not found")
     db_test.name = test.name
+    db_test.school_id = test.school_id
     for question in test.questions:
         db_question = db.query(models.Question).filter(models.Question.id==question.id).first()
         db_question.question_text=question.question_text
+        db_question.pda_id = question.pda_id
         db.commit()
         db.refresh(db_question)
         for choice in question.choices:
@@ -521,12 +523,12 @@ def update_test(test_id: int, test: schemas.TestUpdate, db: Session = Depends(ge
                 db.commit()
                 db.refresh(db_choice)
         if question.deleted_choices:
-            for id in deleted_choices:
+            for id in question.deleted_choices:
                 db.query(models.Choice).filter(models.Choice.id == id).delete()
                 db.commit()
     if test.new_questions:
         for question in test.new_questions:
-            db_question = models.Question(question_text=question.question_text, test_id=test_id)
+            db_question = models.Question(question_text=question.question_text, pda_id=question.pda_id, test_id=test_id)
             db.add(db_question)
             db.commit()
             db.refresh(db_question)
@@ -536,7 +538,8 @@ def update_test(test_id: int, test: schemas.TestUpdate, db: Session = Depends(ge
                 db.commit()
                 db.refresh(db_choice)
     if test.deleted_questions:
-        for id in deleted_questions:
+        for id in test.deleted_questions:
+            db.query(models.Choice).filter(models.Choice.question_id == id).delete()
             db.query(models.Question).filter(models.Question.id == id).delete()
             db.commit()
     

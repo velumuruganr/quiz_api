@@ -31,6 +31,7 @@ class PersonalDevelopmentArea(Base):
     
     id = Column(Integer, primary_key=True, index=True)
     content = Column(String(255))
+    questions = relationship("Question", back_populates="pda")
     
     
 class School(Base):
@@ -64,14 +65,17 @@ class Test(Base):
     questions = relationship("Question", back_populates="test")
     school = relationship("School",back_populates="tests")
     
+    
 class Question(Base):
     __tablename__ = "questions"
 
     id = Column(Integer, primary_key=True, index=True)
+    pda_id = Column(Integer, ForeignKey("personal_development_areas.id"), nullable=False)
     question_text = Column(String)
     
     test_id = Column(Integer, ForeignKey("tests.id"))
     
+    pda = relationship("PersonalDevelopmentArea", back_populates="questions")
     choices = relationship("Choice", back_populates="question")
     answers = relationship("Answer", back_populates="question")
     test = relationship("Test", back_populates="questions")

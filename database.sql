@@ -35,3 +35,7 @@ CREATE TABLE tests (id INT AUTO_INCREMENT PRIMARY KEY,name VARCHAR(30), school_i
 CREATE TABLE questions (id INT AUTO_INCREMENT PRIMARY KEY,question_text VARCHAR(30), test_id INT , FOREIGN KEY(test_id) REFERENCES tests(id));
 
 CREATE TABLE choices (id INT AUTO_INCREMENT PRIMARY KEY,choice_text VARCHAR(30), is_correct BOOLEAN, question_id INT , FOREIGN KEY(question_id) REFERENCES questions(id));
+
+
+ALTER TABLE questions ADD COLUMN pda_id INT;
+ALTER TABLE questions ADD FOREIGN KEY (pda_id) REFERENCES questions(id);
