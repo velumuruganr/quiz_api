@@ -74,6 +74,13 @@ class TeacherDetails(BaseModel):
     school_name: str
     school_address: str
     
+
+class PersonalDevelopmentArea(BaseModel):
+    id: int
+    content: str
+    
+    class Config:
+        orm_mode = True
     
 # Schemas for Test
 
@@ -83,7 +90,7 @@ class TestQuestionChoiceCreate(BaseModel):
 
 
 class TestQuestionChoiceUpdate(BaseModel):
-    id: int
+    id: int | None
     choice_text: str
     is_correct: bool
 
@@ -95,12 +102,11 @@ class TestQuestionCreate(BaseModel):
 
 
 class TestQuestionUpdate(BaseModel):
-    id: int
+    id: int | None
     question_text: str
-    pda_id: int
+    pda_id: int | None
+    pda: PersonalDevelopmentArea | None
     choices: List[TestQuestionChoiceUpdate]
-    new_choices: List[TestQuestionChoiceCreate] | None
-    deleted_choices: List[int] | None
 
 
 class TestCreate(BaseModel):
@@ -110,12 +116,10 @@ class TestCreate(BaseModel):
 
 
 class TestUpdate(BaseModel):
-    id: int
+    id: int | None
     name: str
     school_id:int
-    questions: List[TestQuestionUpdate] 
-    new_questions: List[TestQuestionCreate] | None
-    deleted_questions: List[int] | None
+    questions: List[TestQuestionUpdate]
 
     
     
@@ -128,12 +132,6 @@ class TestQuestionChoice(BaseModel):
         orm_mode = True
 
 
-class PersonalDevelopmentArea(BaseModel):
-    id: int
-    content: str
-    
-    class Config:
-        orm_mode = True
         
         
 class TestQuestion(BaseModel):

@@ -47,12 +47,19 @@ ACCESS_TOKEN_EXPIRE_MINUTES = 30
 app = FastAPI()
 router = APIRouter()
 
+origins = ["http://localhost:4200/",
+           "http://127.0.0.1:4200/",
+           "*"]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=origins,
+    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
 # database configuration
 DATABASE_URL = f"mysql+mysqlconnector://{DB_USERNAME}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
 engine = create_engine(DATABASE_URL, echo=True)
@@ -464,7 +471,7 @@ def delete_school(school_id: int, db: Session = Depends(get_db)):
 
 #create a new test
 
-@router.post("/tests/", response_model=schemas.Test)
+@app.post("/tests", response_model=schemas.Test)
 def create_test(test: schemas.TestCreate, db: Session = Depends(get_db)):
     db_test = models.Test(name=test.name, school_id=test.school_id)
     db.add(db_test)
@@ -483,13 +490,13 @@ def create_test(test: schemas.TestCreate, db: Session = Depends(get_db)):
     return db_test
 
 
-@router.get("/tests/", response_model=List[schemas.Test])
+@app.get("/tests", response_model=List[schemas.Test])
 def read_tests(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
     tests = db.query(models.Test).offset(skip).limit(limit).all()
     return tests
 
 
-@router.get("/tests/{test_id}", response_model=schemas.Test)
+@app.get("/tests/{test_id}", response_model=schemas.Test)
 def read_test(test_id: int, db: Session = Depends(get_db)):
     test = db.query(models.Test).filter(models.Test.id == test_id).first()
     if not test:
@@ -497,38 +504,20 @@ def read_test(test_id: int, db: Session = Depends(get_db)):
     return test
 
 
-@router.put("/tests/{test_id}", response_model=schemas.Test)
+@app.put("/tests/{test_id}", response_model=schemas.Test)
 def update_test(test_id: int, test: schemas.TestUpdate, db: Session = Depends(get_db)):
     db_test = db.query(models.Test).filter(models.Test.id == test_id).first()
     if not db_test:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Test not found")
     db_test.name = test.name
     db_test.school_id = test.school_id
+    
     for question in test.questions:
+        if not question.pda_id:
+            question.pda_id = question.pda.id
         db_question = db.query(models.Question).filter(models.Question.id==question.id).first()
-        db_question.question_text=question.question_text
-        db_question.pda_id = question.pda_id
-        db.commit()
-        db.refresh(db_question)
-        for choice in question.choices:
-            db_choice = db.query(models.Choice).filter(models.Choice.id==choice.id).first()
-            db_choice.choice_text=choice.choice_text
-            db_choice.is_correct=choice.is_correct
-            db.commit()
-            db.refresh(db_choice)
-        if question.new_choices:
-            for choice in question.new_choices:
-                db_choice = models.Choice(choice_text=choice.choice_text,is_correct=choice.is_correct, question_id=question.id)
-                db.add(db_choice)
-                db.commit()
-                db.refresh(db_choice)
-        if question.deleted_choices:
-            for id in question.deleted_choices:
-                db.query(models.Choice).filter(models.Choice.id == id).delete()
-                db.commit()
-    if test.new_questions:
-        for question in test.new_questions:
-            db_question = models.Question(question_text=question.question_text, pda_id=question.pda_id, test_id=test_id)
+        if not db_question:
+            db_question = models.Question(question_text=question.question_text,pda_id=question.pda_id, test_id=db_test.id)
             db.add(db_question)
             db.commit()
             db.refresh(db_question)
@@ -537,13 +526,23 @@ def update_test(test_id: int, test: schemas.TestUpdate, db: Session = Depends(ge
                 db.add(db_choice)
                 db.commit()
                 db.refresh(db_choice)
-    if test.deleted_questions:
-        for id in test.deleted_questions:
-            db.query(models.Choice).filter(models.Choice.question_id == id).delete()
-            db.query(models.Question).filter(models.Question.id == id).delete()
+        else:       
+            db_question.question_text=question.question_text
+            db_question.pda_id = question.pda_id
             db.commit()
-    
-    
+            db.refresh(db_question)
+            for choice in question.choices:
+                db_choice = db.query(models.Choice).filter(models.Choice.id==choice.id).first()
+                if db_choice:
+                    db_choice.choice_text=choice.choice_text
+                    db_choice.is_correct=choice.is_correct
+                    db.commit()
+                    db.refresh(db_choice)
+                else:
+                    db_choice = models.Choice(choice_text=choice.choice_text,is_correct=choice.is_correct, question_id=db_question.id)
+                    db.add(db_choice)
+                    db.commit()
+                    db.refresh(db_choice)
     db.commit()
     db.refresh(db_test)
     return db_test
