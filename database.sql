@@ -39,3 +39,16 @@ CREATE TABLE choices (id INT AUTO_INCREMENT PRIMARY KEY,choice_text VARCHAR(30),
 
 ALTER TABLE questions ADD COLUMN pda_id INT;
 ALTER TABLE questions ADD FOREIGN KEY (pda_id) REFERENCES questions(id);
+
+CREATE TABLE test_schools (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  test_id INT NOT NULL,
+  school_id INT NOT NULL,
+  FOREIGN KEY (test_id) REFERENCES tests(id) ON DELETE CASCADE,
+  FOREIGN KEY (school_id) REFERENCES schools(id) ON DELETE CASCADE,
+  UNIQUE KEY (test_id, school_id)
+);
+
+ALTER TABLE tests DROP  school_id;
+
+ALTER TABLE tests DROP FOREIGN KEY (school_id);

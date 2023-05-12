@@ -17,7 +17,7 @@ import smtplib
 import secrets
 import datetime
 from models import PersonalDevelopmentArea, School, Teacher, User
-from schemas import JWTUser, PasswordUpdateRequest, SchoolCreate, SchoolResponse, SchoolUpdate, TeacherDetails, UserRequest
+from schemas import JWTUser, PasswordUpdateRequest, SchoolCreate, School, SchoolUpdate, TeacherDetails, UserRequest
 import schemas
 import models
 import uvicorn
@@ -423,7 +423,7 @@ def delete_area(id: int, db: Session = Depends(get_db)):
 #CRUD API for Schools
 
 # create a new school
-@router.post("/schools", response_model=SchoolResponse)
+@router.post("/schools", response_model=School)
 def create_school(school: SchoolCreate, db: Session = Depends(get_db)):
     new_school = School(**school.dict())
     db.add(new_school)
@@ -432,13 +432,13 @@ def create_school(school: SchoolCreate, db: Session = Depends(get_db)):
     return new_school
 
 # get all schools
-@router.get("/schools", response_model=List[SchoolResponse])
+@router.get("/schools", response_model=List[School])
 def read_all_schools(db: Session = Depends(get_db)):
     schools = db.query(School).all()
     return schools
 
 # get a specific school by ID
-@router.get("/schools/{school_id}", response_model=SchoolResponse)
+@router.get("/schools/{school_id}", response_model=School)
 def read_school(school_id: int, db: Session = Depends(get_db)):
     school = db.query(School).filter(School.id == school_id).first()
     if not school:
@@ -446,7 +446,7 @@ def read_school(school_id: int, db: Session = Depends(get_db)):
     return school
 
 # update a specific school by ID
-@router.put("/schools/{school_id}", response_model=SchoolResponse)
+@router.put("/schools/{school_id}", response_model=School)
 def update_school(school_id: int, school: SchoolUpdate, db: Session = Depends(get_db)):
     existing_school = db.query(School).filter(School.id == school_id).first()
     if not existing_school:
@@ -473,10 +473,15 @@ def delete_school(school_id: int, db: Session = Depends(get_db)):
 
 @app.post("/tests", response_model=schemas.Test)
 def create_test(test: schemas.TestCreate, db: Session = Depends(get_db)):
-    db_test = models.Test(name=test.name, school_id=test.school_id)
+    db_test = models.Test(name=test.name)
     db.add(db_test)
     db.commit()
     db.refresh(db_test)
+    for school in test.school_ids:
+        db_test_school = models.TestSchool(test_id=db_test.id, school_id=school)
+        db.add(db_test_school)
+        db.commit()
+        db.refresh(db_test_school)
     for question in test.questions:
         db_question = models.Question(question_text=question.question_text,pda_id=question.pda_id, test_id=db_test.id)
         db.add(db_question)
@@ -510,7 +515,19 @@ def update_test(test_id: int, test: schemas.TestUpdate, db: Session = Depends(ge
     if not db_test:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Test not found")
     db_test.name = test.name
-    db_test.school_id = test.school_id
+    db_test_school = db.query(models.TestSchool).filter(models.TestSchool.test_id == test_id).all()
+
+    for school in test.school_ids:
+        if school not in db_test_school.school_id:
+            db_test_school = models.TestSchool(test_id=test_id, school_id=school)
+            db.add(db_test_school)
+            db.commit()
+            db.refresh(db_test_school)
+    for school in db_test_school:
+        if school.id not in test.school_ids:
+            db.delete(school)
+            db.commit()
+            db.refresh(db_test_school)
     
     for question in test.questions:
         if not question.pda_id:
@@ -555,6 +572,8 @@ def delete_test(test_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Test not found")
     
     db_question = db.query(models.Question).filter(models.Question.test_id == test_id).all()
+    
+    db.query(models.TestSchool).filter(models.TestSchool.test_id == test_id).delete()
     
     for question in db_question:
         db.query(models.Choice).filter(models.Choice.question_id == question.id).delete()

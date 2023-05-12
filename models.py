@@ -1,4 +1,4 @@
-from sqlalchemy import Boolean, Column, ForeignKey, Integer, String, Enum as EnumColumn, DateTime
+from sqlalchemy import Boolean, Column, ForeignKey, Integer, String, Enum as EnumColumn, DateTime, Table
 from enum import Enum
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
@@ -32,18 +32,25 @@ class PersonalDevelopmentArea(Base):
     id = Column(Integer, primary_key=True, index=True)
     content = Column(String(255))
     questions = relationship("Question", back_populates="pda")
+
+
+class TestSchool(Base):
+    __tablename__ = 'test_schools'
     
-    
+    test_id = Column(Integer, ForeignKey('tests.id'))
+    school_id = Column(Integer, ForeignKey('schools.id'))
+
+
 class School(Base):
     __tablename__ = "schools"
     id = Column(Integer, primary_key=True, index=True)
-    name = Column(String(50), index=True)
-    address = Column(String(255), index=True)
+    name = Column(String, index=True)
+    address = Column(String, index=True)
     
     teachers = relationship("Teacher", back_populates="school")
-    tests = relationship("Test", back_populates="school")
-
+    tests = relationship('Test', secondary=TestSchool, back_populates='schools')
     
+
 
 class Teacher(Base):
     __tablename__ = "teachers"
@@ -55,15 +62,15 @@ class Teacher(Base):
     user = relationship("User", back_populates="teacher")
 
 
+
 class Test(Base):
     __tablename__ = "tests"
 
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, index=True)
-    school_id = Column(Integer, ForeignKey("schools.id"), nullable=False)
 
     questions = relationship("Question", back_populates="test")
-    school = relationship("School",back_populates="tests")
+    schools = relationship('School', secondary=TestSchool, back_populates='tests')
     
     
 class Question(Base):

@@ -30,7 +30,7 @@ class SchoolUpdate(BaseModel):
 
 
 # create a Pydantic model for the response body representing a school
-class SchoolResponse(BaseModel):
+class School(BaseModel):
     id: int
     name: str
     address: str
@@ -111,14 +111,14 @@ class TestQuestionUpdate(BaseModel):
 
 class TestCreate(BaseModel):
     name: str
-    school_id : int
+    school_ids: List[int]
     questions: List[TestQuestionCreate]
 
 
 class TestUpdate(BaseModel):
     id: int | None
     name: str
-    school_id:int
+    school_ids: List[int]
     questions: List[TestQuestionUpdate]
 
     
@@ -144,22 +144,22 @@ class TestQuestion(BaseModel):
         orm_mode = True
 
 
+
+
 class Test(BaseModel):
     id: int
     name: str
-    school: SchoolResponse
+    schools: List[School] = []
     questions: List[TestQuestion]
 
     class Config:
         orm_mode = True
 
 
-# Schemas for Test Result
-
-class TestResultCreate(BaseModel):
-    test_id: int
-    student_id: int
-    answers: List[int]
+# class TestResultCreate(BaseModel):
+#     test_id: int
+#     student_id: int
+#     answers: List[int]
 
 
 # class TestResult(BaseModel):
