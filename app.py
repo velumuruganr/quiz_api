@@ -423,7 +423,7 @@ def delete_area(id: int, db: Session = Depends(get_db)):
 #CRUD API for Schools
 
 # create a new school
-@router.post("/schools", response_model=School)
+@router.post("/schools", response_model=schemas.School)
 def create_school(school: SchoolCreate, db: Session = Depends(get_db)):
     new_school = models.School(**school.dict())
     db.add(new_school)
@@ -432,13 +432,15 @@ def create_school(school: SchoolCreate, db: Session = Depends(get_db)):
     return new_school
 
 # get all schools
-@router.get("/schools", response_model=List[School])
+@router.get("/schools", response_model=List[schemas.School])
 def read_all_schools(db: Session = Depends(get_db)):
     schools = db.query(models.School).all()
+    if not schools:
+        raise HTTPException(status_code=204, detail="No data found")
     return schools
 
 # get a specific school by ID
-@router.get("/schools/{school_id}", response_model=School)
+@router.get("/schools/{school_id}", response_model=schemas.School)
 def read_school(school_id: int, db: Session = Depends(get_db)):
     school = db.query(models.School).filter(models.School.id == school_id).first()
     if not school:
@@ -446,7 +448,7 @@ def read_school(school_id: int, db: Session = Depends(get_db)):
     return school
 
 # update a specific school by ID
-@router.put("/schools/{school_id}", response_model=School)
+@router.put("/schools/{school_id}", response_model=schemas.School)
 def update_school(school_id: int, school: SchoolUpdate, db: Session = Depends(get_db)):
     existing_school = db.query(models.School).filter(models.School.id == school_id).first()
     if not existing_school:
