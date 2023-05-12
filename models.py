@@ -37,6 +37,9 @@ class PersonalDevelopmentArea(Base):
 class TestSchool(Base):
     __tablename__ = 'test_schools'
     
+    id = Column(Integer, primary_key=True, index=True)
+
+    
     test_id = Column(Integer, ForeignKey('tests.id'))
     school_id = Column(Integer, ForeignKey('schools.id'))
 

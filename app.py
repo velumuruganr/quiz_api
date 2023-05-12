@@ -17,7 +17,7 @@ import smtplib
 import secrets
 import datetime
 from models import PersonalDevelopmentArea, School, Teacher, User
-from schemas import JWTUser, PasswordUpdateRequest, SchoolCreate, School, SchoolUpdate, TeacherDetails, UserRequest
+from schemas import JWTUser, PasswordUpdateRequest, SchoolCreate, SchoolUpdate, TeacherDetails, UserRequest
 import schemas
 import models
 import uvicorn
@@ -259,7 +259,7 @@ def create_teacher(teacher: schemas.TeacherCreate, db: Session = Depends(get_db)
     db.add(db_user)
     db.commit()
     db.refresh(db_user)
-    school = db.query(School).filter(School.name == teacher.school_name).first()
+    school = db.query(models.School).filter(models.School.name == teacher.school_name).first()
     db_teacher = models.Teacher(
         user_id=db_user.id,
         school_id=school.id
@@ -299,7 +299,7 @@ def read_teacher(teacher_id: int, db: Session = Depends(get_db)):
     if not db_teacher:
         raise HTTPException(status_code=404, detail="Teacher not found")
     user = db.query(User).filter(User.id == db_teacher.user_id).first()
-    school = db.query(School).filter(School.id == db_teacher.school_id).first()
+    school = db.query(models.School).filter(models.School.id == db_teacher.school_id).first()
     return TeacherDetails(
         id=db_teacher.id,
         username=user.username,
@@ -322,11 +322,11 @@ def get_profile(token:str, db: Session = Depends(get_db)):
 # Get all teachers
 @router.get("/teachers")
 def read_teachers(db: Session = Depends(get_db)):
-    teachers = db.query(Teacher).join(User).join(School).all()
+    teachers = db.query(models.Teacher).join(models.User).join(models.School).all()
     all_teachers = []
     for db_teacher in teachers:
         user = db.query(User).filter(User.id == db_teacher.user_id).first()
-        school = db.query(School).filter(School.id == db_teacher.school_id).first()
+        school = db.query(models.School).filter(models.School.id == db_teacher.school_id).first()
         all_teachers.append(TeacherDetails(
             id=db_teacher.id,
             username=user.username,
@@ -425,7 +425,7 @@ def delete_area(id: int, db: Session = Depends(get_db)):
 # create a new school
 @router.post("/schools", response_model=School)
 def create_school(school: SchoolCreate, db: Session = Depends(get_db)):
-    new_school = School(**school.dict())
+    new_school = models.School(**school.dict())
     db.add(new_school)
     db.commit()
     db.refresh(new_school)
@@ -434,13 +434,13 @@ def create_school(school: SchoolCreate, db: Session = Depends(get_db)):
 # get all schools
 @router.get("/schools", response_model=List[School])
 def read_all_schools(db: Session = Depends(get_db)):
-    schools = db.query(School).all()
+    schools = db.query(models.School).all()
     return schools
 
 # get a specific school by ID
 @router.get("/schools/{school_id}", response_model=School)
 def read_school(school_id: int, db: Session = Depends(get_db)):
-    school = db.query(School).filter(School.id == school_id).first()
+    school = db.query(models.School).filter(models.School.id == school_id).first()
     if not school:
         raise HTTPException(status_code=404, detail="School not found")
     return school
@@ -448,7 +448,7 @@ def read_school(school_id: int, db: Session = Depends(get_db)):
 # update a specific school by ID
 @router.put("/schools/{school_id}", response_model=School)
 def update_school(school_id: int, school: SchoolUpdate, db: Session = Depends(get_db)):
-    existing_school = db.query(School).filter(School.id == school_id).first()
+    existing_school = db.query(models.School).filter(models.School.id == school_id).first()
     if not existing_school:
         raise HTTPException(status_code=404, detail="School not found")
     for field, value in school:
@@ -459,7 +459,7 @@ def update_school(school_id: int, school: SchoolUpdate, db: Session = Depends(ge
 # delete a specific school by ID
 @router.delete("/schools/{school_id}")
 def delete_school(school_id: int, db: Session = Depends(get_db)):
-    school = db.query(School).filter(School.id == school_id).first()
+    school = db.query(models.School).filter(models.School.id == school_id).first()
     if not school:
         raise HTTPException(status_code=404, detail="School not found")
     db.delete(school)
