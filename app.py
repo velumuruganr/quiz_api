@@ -618,6 +618,55 @@ def delete_test(test_id: int, db: Session = Depends(get_db)):
     db.commit()
     return {"detail": "Test deleted"}
 
+@router.post('/result', response_model=schemas.Result)
+def create_result(request: schemas.ResultCreate, db: Session = Depends(get_db)):
+    existing_db_result = db.query(models.Result).filter(models.Result.student_id==request.student_id, models.Result.test_id==request.test_id).first()
+    total_questions = db.query(models.Question).filter(models.Question.test_id == request.test_id).count()
+    correctly_answered = 0
+    
+    for answer in request.answers:
+        db_answers = db.query(models.Choice).filter(models.Choice.question_id == answer.question_id, models.Choice.is_correct == True).all()
+        if len(db_answers) == len(answer.selected_choices):
+            if all(db_answer.id in answer.selected_choices for db_answer in db_answers):
+                correctly_answered += 1
+                    
+    if existing_db_result:
+        existing_db_result.total_questions= total_questions
+        existing_db_result.correctly_answered = correctly_answered
+        db.commit()
+        db.refresh(existing_db_result)
+        return existing_db_result
+    db_result = models.Result(test_id=request.test_id, student_id=request.student_id, total_questions=total_questions, correctly_answered=correctly_answered)
+    db.add(db_result)
+    db.commit()
+    db.refresh(db_result)
+    return db_result
+
+
+@router.get('/results', response_model=List[schemas.Result])
+def read_all_results(db: Session = Depends(get_db)):
+    db_result = db.query(models.Result).all()
+    
+    return db_result
+
+@router.get('/students/{student_id}/results', response_model=List[schemas.Result])
+def get_results_of_student(student_id: int, db: Session = Depends(get_db)):
+    db_result = db.query(models.Result).filter(models.Result.student_id == student_id).all()
+    return db_result
+
+
+@router.get('/tests/{test_id}/results', response_model=List[schemas.Result])
+def get_results_of_test(test_id: int, db: Session = Depends(get_db)):
+    db_result = db.query(models.Result).filter(models.Result.test_id == test_id).all()
+    return db_result
+
+
+@router.get('/schools/{school_id}/results', response_model=List[schemas.Result])
+def get_results_of_all_students_of_school(school_id: int, db: Session = Depends(get_db)):
+    db_result = db.query(models.Result).filter(models.Student.school_id== school_id).all()
+
+    return db_result
+
 
 app.include_router(router)
 

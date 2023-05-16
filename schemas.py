@@ -155,22 +155,6 @@ class Test(BaseModel):
     class Config:
         orm_mode = True
 
-
-# class TestResultCreate(BaseModel):
-#     test_id: int
-#     student_id: int
-#     answers: List[int]
-
-
-# class TestResult(BaseModel):
-#     id: int
-#     test: Test
-#     student: User
-#     answers: List[int]
-#     score: float
-
-#     class Config:
-#         orm_mode = True
             
 class Profile(BaseModel):
     username:str
@@ -210,6 +194,35 @@ class Student(BaseModel):
     name: str
     class_group: str
     school: School
+
+    class Config:
+        orm_mode = True
+        
+
+class ResultAnswerCreate(BaseModel):
+    question_id: int
+    selected_choices: List[int]
+
+
+# create a Pydantic model for the request body to create a new school
+class ResultCreate(BaseModel):
+    test_id: int
+    student_id: int
+    answers: List[ResultAnswerCreate]
+
+# class ResultAnswers(BaseModel):
+#     question_id: int
+#     is_correct: bool
+
+
+# create a Pydantic model for the response body representing a student
+class Result(BaseModel):
+    id: int
+    total_questions: int
+    correctly_answered: int
+    student: Student
+    test: Test
+    # answers: List[ResultAnswers]
 
     class Config:
         orm_mode = True

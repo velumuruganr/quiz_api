@@ -39,15 +39,6 @@ test_schools = Table('test_schools', Base.metadata,
     Column('school_id', Integer, ForeignKey('schools.id'))
 )
 
-# class TestSchool(Base):
-#     __tablename__ = 'test_schools'
-    
-#     id = Column(Integer, primary_key=True, index=True)
-
-    
-#     test_id = Column(Integer, ForeignKey('tests.id'))
-#     school_id = Column(Integer, ForeignKey('schools.id'))
-
 
 class School(Base):
     __tablename__ = "schools"
@@ -79,6 +70,8 @@ class Test(Base):
     name = Column(String, index=True)
 
     questions = relationship("Question", back_populates="test")
+    results = relationship("Result", back_populates="test")
+
     schools = relationship('School',secondary=test_schools, back_populates='tests')
     
     
@@ -93,8 +86,8 @@ class Question(Base):
     
     pda = relationship("PersonalDevelopmentArea", back_populates="questions")
     choices = relationship("Choice", back_populates="question")
-    # answers = relationship("Answer", back_populates="question")
     test = relationship("Test", back_populates="questions")
+    
     
 class Choice(Base):
     __tablename__ = "choices"
@@ -107,14 +100,19 @@ class Choice(Base):
     
     question = relationship("Question", back_populates="choices")
     
-# class Answer(Base):
-#     __tablename__ = "answers"
+class Result(Base):
+    __tablename__ = "results"
 
-#     id = Column(Integer, primary_key=True, index=True)
-#     is_correct = Column(Boolean, default=False)
-#     question_id = Column(Integer, ForeignKey("questions.id"))
-#     student_id = Column(Integer, ForeignKey("students.id"))
-#     question = relationship("Question", back_populates="answers")
+    id = Column(Integer, primary_key=True, index=True)
+    total_questions = Column(Integer)
+    correctly_answered = Column(Integer)
+
+    
+    test_id = Column(Integer, ForeignKey("tests.id"))
+    student_id = Column(Integer, ForeignKey("students.id"))
+    
+    test = relationship("Test", back_populates="results")
+    student = relationship("Student", back_populates="results")
 
     
 
@@ -128,3 +126,4 @@ class Student(Base):
     
     
     school = relationship("School", back_populates="students")
+    results = relationship("Result", back_populates="student")
