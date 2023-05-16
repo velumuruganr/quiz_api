@@ -52,3 +52,5 @@ CREATE TABLE test_schools (
 ALTER TABLE tests DROP  school_id;
 
 ALTER TABLE tests DROP FOREIGN KEY (school_id);
+
+CREATE TABLE students (id INT AUTO_INCREMENT PRIMARY KEY,name VARCHAR(50),class_group VARCHAR(50),school_id INT, FOREIGN KEY(school_id) REFERENCES schools(id));
