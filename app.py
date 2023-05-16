@@ -420,6 +420,51 @@ def delete_area(id: int, db: Session = Depends(get_db)):
     return {"message": "Data deleted"}
 
 
+@router.get("/students", response_model=List[schemas.Student])
+def read_all_students(db: Session = Depends(get_db)):
+    students = db.query(models.Student).all()
+    return students
+
+
+# create a new school
+@router.post("/students", response_model=schemas.Student)
+def create_school(student: schemas.StudentCreate, db: Session = Depends(get_db)):
+    new_student = models.Student(**student.dict())
+    db.add(new_student)
+    db.commit()
+    db.refresh(new_student)
+    return new_student
+
+# get a specific school by ID
+@router.get("/students/{student_id}", response_model=schemas.Student)
+def read_student(student_id: int, db: Session = Depends(get_db)):
+    student = db.query(models.Student).filter(models.Student.id == student_id).first()
+    if not student:
+        raise HTTPException(status_code=404, detail="Student not found")
+    return student
+
+# update a specific student by ID
+@router.put("/students/{student_id}", response_model=schemas.Student)
+def update_student(student_id: int, student: schemas.StudentUpdate, db: Session = Depends(get_db)):
+    existing_student = db.query(models.Student).filter(models.Student.id == student_id).first()
+    if not existing_student:
+        raise HTTPException(status_code=404, detail="Student not found")
+    for field, value in student:
+        setattr(existing_student, field, value)
+    db.commit()
+    return existing_student
+
+# delete a specific student by ID
+@router.delete("/students/{student_id}")
+def delete_student(student_id: int, db: Session = Depends(get_db)):
+    student = db.query(models.Student).filter(models.Student.id == student_id).first()
+    if not student:
+        raise HTTPException(status_code=404, detail="Student not found")
+    db.delete(student)
+    db.commit()
+    return {"message": "Student deleted successfully"}
+
+
 #CRUD API for Schools
 
 # create a new school
@@ -436,7 +481,7 @@ def create_school(school: SchoolCreate, db: Session = Depends(get_db)):
 def read_all_schools(db: Session = Depends(get_db)):
     schools = db.query(models.School).all()
     if not schools:
-        raise HTTPException(status_code=204, detail="No data found")
+        raise HTTPException(status_code=404, detail="No data found")
     return schools
 
 # get a specific school by ID
@@ -476,14 +521,13 @@ def delete_school(school_id: int, db: Session = Depends(get_db)):
 @app.post("/tests", response_model=schemas.Test)
 def create_test(test: schemas.TestCreate, db: Session = Depends(get_db)):
     db_test = models.Test(name=test.name)
+    db_schools = db.query(models.School).filter(models.School.id.in_(test.school_ids)).all()
+    if not db_schools:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Data not found")
+    db_test.schools = db_schools
     db.add(db_test)
     db.commit()
     db.refresh(db_test)
-    for school in test.school_ids:
-        db_test_school = models.TestSchool(test_id=db_test.id, school_id=school)
-        db.add(db_test_school)
-        db.commit()
-        db.refresh(db_test_school)
     for question in test.questions:
         db_question = models.Question(question_text=question.question_text,pda_id=question.pda_id, test_id=db_test.id)
         db.add(db_question)
@@ -517,19 +561,9 @@ def update_test(test_id: int, test: schemas.TestUpdate, db: Session = Depends(ge
     if not db_test:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Test not found")
     db_test.name = test.name
-    db_test_school = db.query(models.TestSchool).filter(models.TestSchool.test_id == test_id).all()
-
-    for school in test.school_ids:
-        if school not in db_test_school.school_id:
-            db_test_school = models.TestSchool(test_id=test_id, school_id=school)
-            db.add(db_test_school)
-            db.commit()
-            db.refresh(db_test_school)
-    for school in db_test_school:
-        if school.id not in test.school_ids:
-            db.delete(school)
-            db.commit()
-            db.refresh(db_test_school)
+    
+    db_schools = db.query(models.School).filter(models.School.id in test.school_ids).all()
+    db_test.schools = db_schools
     
     for question in test.questions:
         if not question.pda_id:
@@ -567,15 +601,13 @@ def update_test(test_id: int, test: schemas.TestUpdate, db: Session = Depends(ge
     return db_test
 
 
-@router.delete("/tests/{test_id}")
+@app.delete("/tests/{test_id}")
 def delete_test(test_id: int, db: Session = Depends(get_db)):
     db_test = db.query(models.Test).filter(models.Test.id == test_id).first()
     if not db_test:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Test not found")
     
     db_question = db.query(models.Question).filter(models.Question.test_id == test_id).all()
-    
-    db.query(models.TestSchool).filter(models.TestSchool.test_id == test_id).delete()
     
     for question in db_question:
         db.query(models.Choice).filter(models.Choice.question_id == question.id).delete()

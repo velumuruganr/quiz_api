@@ -32,16 +32,21 @@ class PersonalDevelopmentArea(Base):
     id = Column(Integer, primary_key=True, index=True)
     content = Column(String(255))
     questions = relationship("Question", back_populates="pda")
-
-
-class TestSchool(Base):
-    __tablename__ = 'test_schools'
     
-    id = Column(Integer, primary_key=True, index=True)
+    
+test_schools = Table('test_schools', Base.metadata,
+    Column('test_id', Integer, ForeignKey('tests.id')),
+    Column('school_id', Integer, ForeignKey('schools.id'))
+)
+
+# class TestSchool(Base):
+#     __tablename__ = 'test_schools'
+    
+#     id = Column(Integer, primary_key=True, index=True)
 
     
-    test_id = Column(Integer, ForeignKey('tests.id'))
-    school_id = Column(Integer, ForeignKey('schools.id'))
+#     test_id = Column(Integer, ForeignKey('tests.id'))
+#     school_id = Column(Integer, ForeignKey('schools.id'))
 
 
 class School(Base):
@@ -51,7 +56,8 @@ class School(Base):
     address = Column(String, index=True)
     
     teachers = relationship("Teacher", back_populates="school")
-    tests = relationship('Test', secondary=TestSchool, back_populates='schools')
+    students = relationship("Student", back_populates="school")
+    tests = relationship('Test',secondary=test_schools, back_populates='schools')
     
 
 
@@ -73,7 +79,7 @@ class Test(Base):
     name = Column(String, index=True)
 
     questions = relationship("Question", back_populates="test")
-    schools = relationship('School', secondary=TestSchool, back_populates='tests')
+    schools = relationship('School',secondary=test_schools, back_populates='tests')
     
     
 class Question(Base):
@@ -87,7 +93,7 @@ class Question(Base):
     
     pda = relationship("PersonalDevelopmentArea", back_populates="questions")
     choices = relationship("Choice", back_populates="question")
-    answers = relationship("Answer", back_populates="question")
+    # answers = relationship("Answer", back_populates="question")
     test = relationship("Test", back_populates="questions")
     
 class Choice(Base):
@@ -101,21 +107,24 @@ class Choice(Base):
     
     question = relationship("Question", back_populates="choices")
     
-class Answer(Base):
-    __tablename__ = "answers"
+# class Answer(Base):
+#     __tablename__ = "answers"
 
-    id = Column(Integer, primary_key=True, index=True)
-    is_correct = Column(Boolean, default=False)
-    question_id = Column(Integer, ForeignKey("questions.id"))
-    student_id = Column(Integer, ForeignKey("students.id"))
-    question = relationship("Question", back_populates="answers")
-    student = relationship("Student", back_populates="answers")
+#     id = Column(Integer, primary_key=True, index=True)
+#     is_correct = Column(Boolean, default=False)
+#     question_id = Column(Integer, ForeignKey("questions.id"))
+#     student_id = Column(Integer, ForeignKey("students.id"))
+#     question = relationship("Question", back_populates="answers")
 
+    
 
 class Student(Base):
     __tablename__ = "students"
 
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, index=True)
-    email = Column(String, index=True)
-    answers = relationship("Answer", back_populates="student")
+    class_group = Column(String(255))
+    school_id = Column(Integer, ForeignKey("schools.id"))
+    
+    
+    school = relationship("School", back_populates="students")

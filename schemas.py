@@ -182,3 +182,34 @@ class ForgetPasswordRequest(BaseModel):
 class ResetPasswordRequest(BaseModel):
     reset_token: str
     new_password:str
+    
+    
+# create a Pydantic model for the request body to create a new school
+class StudentCreate(BaseModel):
+    name: str
+    class_group: str
+    school_id: int
+
+
+# create a Pydantic model for the request body to update an existing student
+class StudentUpdate(BaseModel):
+    name: Optional[str]
+    class_group: Optional[str]
+    school_id: int
+    # define a method to iterate over the fields of the model
+    def __iter__(self):
+        for field in self.__fields__:
+            value = getattr(self, field)
+            if value is not None:
+                yield field, value
+
+
+# create a Pydantic model for the response body representing a student
+class Student(BaseModel):
+    id: int
+    name: str
+    class_group: str
+    school: School
+
+    class Config:
+        orm_mode = True
