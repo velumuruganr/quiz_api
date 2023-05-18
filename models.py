@@ -1,17 +1,10 @@
-from sqlalchemy import Column, ForeignKey, Integer, String, Enum as EnumColumn, DateTime
+from sqlalchemy import Boolean, Column, ForeignKey, Integer, String, Enum as EnumColumn, DateTime, Table
 from enum import Enum
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
 
 
 Base = declarative_base()
-    
-    
-test_schools = Table('test_schools', Base.metadata,
-    Column('test_id', Integer, ForeignKey('tests.id')),
-    Column('school_id', Integer, ForeignKey('schools.id'))
-)
-
 
 # user roles enum
 class UserRole(str, Enum):
@@ -33,24 +26,30 @@ class User(Base):
     
     teacher = relationship("Teacher", back_populates="user")
 
-
 class PersonalDevelopmentArea(Base):
     __tablename__ = "personal_development_areas"
     
     id = Column(Integer, primary_key=True, index=True)
     content = Column(String(255))
     questions = relationship("Question", back_populates="pda")
+    
+    
+test_schools = Table('test_schools', Base.metadata,
+    Column('test_id', Integer, ForeignKey('tests.id')),
+    Column('school_id', Integer, ForeignKey('schools.id'))
+)
 
 
 class School(Base):
     __tablename__ = "schools"
     id = Column(Integer, primary_key=True, index=True)
-    name = Column(String(50), index=True)
-    address = Column(String(255), index=True)
+    name = Column(String, index=True)
+    address = Column(String, index=True)
     
     teachers = relationship("Teacher", back_populates="school")
     students = relationship("Student", back_populates="school")
     tests = relationship('Test',secondary=test_schools, back_populates='schools')
+    
 
 
 class Teacher(Base):
@@ -61,6 +60,7 @@ class Teacher(Base):
     
     school = relationship("School", back_populates="teachers")
     user = relationship("User", back_populates="teacher")
+
 
 
 class Test(Base):
@@ -87,6 +87,7 @@ class Question(Base):
     pda = relationship("PersonalDevelopmentArea", back_populates="questions")
     choices = relationship("Choice", back_populates="question")
     test = relationship("Test", back_populates="questions")
+    answers = relationship("Answer", back_populates="question")
     
     
 class Choice(Base):
@@ -100,14 +101,15 @@ class Choice(Base):
     
     question = relationship("Question", back_populates="choices")
 
-    
+
+
+
 class Result(Base):
     __tablename__ = "results"
 
     id = Column(Integer, primary_key=True, index=True)
     total_questions = Column(Integer)
     correctly_answered = Column(Integer)
-    created_at = Column(DateTime)
 
     
     test_id = Column(Integer, ForeignKey("tests.id"))
@@ -115,6 +117,8 @@ class Result(Base):
     
     test = relationship("Test", back_populates="results")
     student = relationship("Student", back_populates="results")
+    answers = relationship("Answer", back_populates="result")
+
     
 
 class Student(Base):
@@ -128,3 +132,19 @@ class Student(Base):
     
     school = relationship("School", back_populates="students")
     results = relationship("Result", back_populates="student")
+
+
+class Answer(Base):
+    __tablename__ = "answers"
+
+
+    id = Column(Integer, primary_key=True, index=True)
+    total_choices = Column(Integer)
+    correctly_answered = Column(Integer)
+    mark = Column(Integer)
+
+    result_id = Column(Integer, ForeignKey("results.id"))
+    question_id = Column(Integer, ForeignKey("questions.id"))
+    
+    question = relationship("Question", back_populates="answers")
+    result = relationship("Result", back_populates="answers")
