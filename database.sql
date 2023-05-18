@@ -56,3 +56,5 @@ ALTER TABLE tests DROP FOREIGN KEY (school_id);
 CREATE TABLE students (id INT AUTO_INCREMENT PRIMARY KEY,name VARCHAR(50),class_group VARCHAR(50),school_id INT, FOREIGN KEY(school_id) REFERENCES schools(id));
 
 create table results(id INT AUTO_INCREMENT PRIMARY KEY,total_questions int,correctly_answered int, test_id INT , student_id int,foreign key(student_id) references students(id),  FOREIGN KEY(test_id) REFERENCES tests(id));
+
+create table answers(id int auto_increment primary key,total_choices int, correctly_answered int, mark int, result_id int, question_id int, foreign key(result_id) references results(id), foreign key(question_id) references questions(id));

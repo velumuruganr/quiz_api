@@ -87,6 +87,7 @@ class Question(Base):
     pda = relationship("PersonalDevelopmentArea", back_populates="questions")
     choices = relationship("Choice", back_populates="question")
     test = relationship("Test", back_populates="questions")
+    answers = relationship("Answer", back_populates="question")
     
     
 class Choice(Base):
@@ -99,7 +100,10 @@ class Choice(Base):
     question_id = Column(Integer, ForeignKey("questions.id"))
     
     question = relationship("Question", back_populates="choices")
-    
+
+
+
+
 class Result(Base):
     __tablename__ = "results"
 
@@ -113,6 +117,7 @@ class Result(Base):
     
     test = relationship("Test", back_populates="results")
     student = relationship("Student", back_populates="results")
+    answers = relationship("Answer", back_populates="result")
 
     
 
@@ -127,3 +132,19 @@ class Student(Base):
     
     school = relationship("School", back_populates="students")
     results = relationship("Result", back_populates="student")
+
+
+class Answer(Base):
+    __tablename__ = "answers"
+
+
+    id = Column(Integer, primary_key=True, index=True)
+    total_choices = Column(Integer)
+    correctly_answered = Column(Integer)
+    mark = Column(Integer)
+
+    result_id = Column(Integer, ForeignKey("results.id"))
+    question_id = Column(Integer, ForeignKey("questions.id"))
+    
+    question = relationship("Question", back_populates="answers")
+    result = relationship("Result", back_populates="answers")
