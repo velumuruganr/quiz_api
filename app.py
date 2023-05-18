@@ -623,28 +623,40 @@ def delete_test(test_id: int, db: Session = Depends(get_db)):
 def create_result(request: schemas.ResultCreate, db: Session = Depends(get_db)):
     existing_db_result = db.query(models.Result).filter(models.Result.student_id==request.student_id, models.Result.test_id==request.test_id).first()
     total_questions = db.query(models.Question).filter(models.Question.test_id == request.test_id).count()
-    correctly_answered = 0.0
+    correctly_answered_questions = 0.0
+    if not existing_db_result:
+        existing_db_result = models.Result(test_id=request.test_id, student_id=request.student_id, total_questions=total_questions, correctly_answered=correctly_answered_questions)
+        db.add(existing_db_result)
+        db.commit()
+        db.refresh(existing_db_result)
+    total_choices = 0
+    correctly_answered = 0
+    mark = 0.0
     
     for answer in request.answers:
         db_answers = db.query(models.Choice).filter(models.Choice.question_id == answer.question_id, models.Choice.is_correct == True).all()
-        all_choices = [value[0] for value in db_answers]
+        all_choices = [value.id for value in db_answers]
 
         total_choices = len(all_choices)
         correctly_answered = len(set(all_choices).intersection(set(answer.selected_choices)))
-        mark = correctly_answered//total_choices
-        correctly_answered += mark
-                    
-    if existing_db_result:
-        existing_db_result.total_questions= total_questions
-        existing_db_result.correctly_answered = correctly_answered
+        mark = correctly_answered/float(total_choices)
+        db_ans = db.query(models.Answer).filter(models.Answer.result_id==existing_db_result.id, models.Answer.question_id==answer.question_id).first()
+        if db_ans:
+            db_ans.mark = mark
+            db_ans.total_choices = total_choices
+            db_ans.correctly_answered = correctly_answered
+        else:
+            db_ans = models.Answer(total_choices=total_choices, correctly_answered=correctly_answered, mark =mark, result_id=existing_db_result.id, question_id=answer.question_id)
+            db.add(db_ans)
         db.commit()
-        db.refresh(existing_db_result)
-        return existing_db_result
-    db_result = models.Result(test_id=request.test_id, student_id=request.student_id, total_questions=total_questions, correctly_answered=correctly_answered)
-    db.add(db_result)
+        db.refresh(db_ans)
+        correctly_answered_questions += mark
+                    
+    existing_db_result.correctly_answered = correctly_answered_questions
     db.commit()
-    db.refresh(db_result)
-    return db_result
+    db.refresh(existing_db_result)
+    return existing_db_result
+
 
 
 @router.get('/results', response_model=List[schemas.Result])

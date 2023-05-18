@@ -1,4 +1,4 @@
-from sqlalchemy import Boolean, Column, ForeignKey, Integer, String, Enum as EnumColumn, DateTime, Table
+from sqlalchemy import Boolean, Column, ForeignKey, Integer, String, Enum as EnumColumn, DateTime, Table, Float
 from enum import Enum
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
@@ -110,6 +110,7 @@ class Result(Base):
     id = Column(Integer, primary_key=True, index=True)
     total_questions = Column(Integer)
     correctly_answered = Column(Integer)
+    created_at = Column(DateTime)
 
     
     test_id = Column(Integer, ForeignKey("tests.id"))
@@ -126,7 +127,7 @@ class Student(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, index=True)
-    class_group = Column(String(255))
+    year_group = Column(String(255))
     school_id = Column(Integer, ForeignKey("schools.id"))
     
     
@@ -141,7 +142,7 @@ class Answer(Base):
     id = Column(Integer, primary_key=True, index=True)
     total_choices = Column(Integer)
     correctly_answered = Column(Integer)
-    mark = Column(Integer)
+    mark = Column(Float)
 
     result_id = Column(Integer, ForeignKey("results.id"))
     question_id = Column(Integer, ForeignKey("questions.id"))

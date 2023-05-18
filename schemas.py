@@ -1,6 +1,7 @@
 from typing import List, Optional
 from pydantic import BaseModel
 from models import UserRole
+from datetime import datetime
 
 # Pydantic model for creating a new user
 class UserRequest(BaseModel):
@@ -171,14 +172,14 @@ class ResetPasswordRequest(BaseModel):
 # create a Pydantic model for the request body to create a new school
 class StudentCreate(BaseModel):
     name: str
-    class_group: str
+    year_group: str
     school_id: int
 
 
 # create a Pydantic model for the request body to update an existing student
 class StudentUpdate(BaseModel):
     name: Optional[str]
-    class_group: Optional[str]
+    year_group: Optional[str]
     school_id: int
     # define a method to iterate over the fields of the model
     def __iter__(self):
@@ -192,7 +193,7 @@ class StudentUpdate(BaseModel):
 class Student(BaseModel):
     id: int
     name: str
-    class_group: str
+    year_group: str
     school: School
 
     class Config:
@@ -219,7 +220,7 @@ class Answer(BaseModel):
     id:int
     total_choices: int
     correctly_answered: int
-    mark: int
+    mark: float
     question: TestQuestion
 
     class Config:
@@ -228,9 +229,10 @@ class Answer(BaseModel):
 # create a Pydantic model for the response body representing a student
 class Result(BaseModel):
     id: int
+    created_at: datetime
     total_questions: int
     correctly_answered: int
-    answers = Answer
+    answers: List[Answer]
     student: Student
     test: Test
     # answers: List[ResultAnswers]
