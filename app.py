@@ -668,6 +668,10 @@ def get_results_of_all_students_of_school(school_id: int, db: Session = Depends(
     return db_result
 
 
+#@router.get('/tests-taken')
+#def number_of_tests_taken(start_date: datetime = 1/1/2000, end_date: datetime = datetime.now() ):
+#    pass
+
 app.include_router(router)
 
 def main():
