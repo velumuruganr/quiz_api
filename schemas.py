@@ -239,3 +239,11 @@ class Result(BaseModel):
 
     class Config:
         orm_mode = True
+
+class TestsPerMonth(BaseModel):
+    year: int
+    month: int
+    test_count: int
+
+    class Config:
+        orm_mode = True

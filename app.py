@@ -3,7 +3,7 @@ from jose import jwt
 from typing import List, Optional
 from fastapi import FastAPI, HTTPException, Depends, status, APIRouter
 from sqlalchemy.orm import Session
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, func
 from sqlalchemy.orm import sessionmaker, subqueryload
 from passlib.context import CryptContext
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
@@ -625,7 +625,7 @@ def create_result(request: schemas.ResultCreate, db: Session = Depends(get_db)):
     total_questions = db.query(models.Question).filter(models.Question.test_id == request.test_id).count()
     correctly_answered_questions = 0.0
     if not existing_db_result:
-        existing_db_result = models.Result(test_id=request.test_id, student_id=request.student_id, total_questions=total_questions, correctly_answered=correctly_answered_questions)
+        existing_db_result = models.Result(test_id=request.test_id, created_at=datetime.datetime.now(), student_id=request.student_id, total_questions=total_questions, correctly_answered=correctly_answered_questions)
         db.add(existing_db_result)
         db.commit()
         db.refresh(existing_db_result)
@@ -653,6 +653,7 @@ def create_result(request: schemas.ResultCreate, db: Session = Depends(get_db)):
         correctly_answered_questions += mark
                     
     existing_db_result.correctly_answered = correctly_answered_questions
+    existing_db_result.created_at = datetime.datetime.now()
     db.commit()
     db.refresh(existing_db_result)
     return existing_db_result
@@ -684,9 +685,17 @@ def get_results_of_all_students_of_school(school_id: int, db: Session = Depends(
     return db_result
 
 
-#@router.get('/tests-taken')
-#def number_of_tests_taken(start_date: datetime = 1/1/2000, end_date: datetime = datetime.now() ):
-#    pass
+@router.get('/tests-taken', response_model=List[schemas.TestsPerMonth])
+def number_of_tests_taken(start_date = datetime.datetime.strptime('01/01/23', '%d/%m/%y').date(), end_date = datetime.datetime.now().date(), db: Session = Depends(get_db) ):
+    start_date = datetime.datetime.strptime(start_date,'%Y-%m-%d')
+    end_date = datetime.datetime.strptime(end_date, '%Y-%m-%d') + datetime.timedelta(hours=23,minutes=59)
+    db_result = db.query(
+        func.extract('year', models.Result.created_at).label('year'),
+        func.extract('month', models.Result.created_at).label('month'),
+        func.count().label('test_count')
+    ).filter(models.Result.created_at >= start_date, models.Result.created_at <= end_date).group_by('year', 'month').order_by('year', 'month').all()
+    print(db_result)
+    return db_result
 
 app.include_router(router)
 
