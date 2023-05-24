@@ -421,15 +421,17 @@ def delete_area(id: int, db: Session = Depends(get_db)):
 
 
 @router.get("/students", response_model=List[schemas.Student])
-def read_all_students(db: Session = Depends(get_db)):
-    students = db.query(models.Student).all()
+def read_students(start_date = str(datetime.datetime.strptime('01/01/23', '%d/%m/%y').date()), end_date = str(datetime.datetime.utcnow().date()),db: Session = Depends(get_db)):
+    start_date = datetime.datetime.strptime(start_date,'%Y-%m-%d')
+    end_date = datetime.datetime.strptime(end_date, '%Y-%m-%d') + datetime.timedelta(hours=23,minutes=59)
+    students = db.query(models.Student).filter(models.Student.registered_at >= start_date, models.Student.registered_at <= end_date).all()
     return students
-
 
 # create a new school
 @router.post("/students", response_model=schemas.Student)
-def create_school(student: schemas.StudentCreate, db: Session = Depends(get_db)):
+def create_student(student: schemas.StudentCreate, db: Session = Depends(get_db)):
     new_student = models.Student(**student.dict())
+    new_student.registered_at = datetime.datetime.utcnow()
     db.add(new_student)
     db.commit()
     db.refresh(new_student)
@@ -542,10 +544,16 @@ def create_test(test: schemas.TestCreate, db: Session = Depends(get_db)):
 
 
 @app.get("/tests", response_model=List[schemas.Test])
-def read_tests(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
-    tests = db.query(models.Test).offset(skip).limit(limit).all()
+def read_tests(db: Session = Depends(get_db)):
+    tests = db.query(models.Test).all()
     return tests
 
+@app.get("/tests/schools/{school_id}", response_model=List[schemas.Test])
+def read_tests_for_school(school_id: int, db: Session = Depends(get_db)):
+    test = db.query(models.Test).filter(models.School.id == school_id).all()
+    if not test:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Test not found")
+    return test
 
 @app.get("/tests/{test_id}", response_model=schemas.Test)
 def read_test(test_id: int, db: Session = Depends(get_db)):
@@ -562,7 +570,8 @@ def update_test(test_id: int, test: schemas.TestUpdate, db: Session = Depends(ge
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Test not found")
     db_test.name = test.name
     
-    db_schools = db.query(models.School).filter(models.School.id in test.school_ids).all()
+    db_schools = db.query(models.School).filter(models.School.id.in_(test.school_ids)).all()
+    
     db_test.schools = db_schools
     
     for question in test.questions:
@@ -621,14 +630,16 @@ def delete_test(test_id: int, db: Session = Depends(get_db)):
 
 @router.post('/result', response_model=schemas.Result)
 def create_result(request: schemas.ResultCreate, db: Session = Depends(get_db)):
-    existing_db_result = db.query(models.Result).filter(models.Result.student_id==request.student_id, models.Result.test_id==request.test_id).first()
+    if not db.query(models.Test).filter(models.Test.id == request.test_id).first():
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Test not found")
+    if not db.query(models.Student).filter(models.Student.id == request.student_id).first():
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Student not found")
     total_questions = db.query(models.Question).filter(models.Question.test_id == request.test_id).count()
-    correctly_answered_questions = 0.0
-    if not existing_db_result:
-        existing_db_result = models.Result(test_id=request.test_id, created_at=datetime.datetime.now(), student_id=request.student_id, total_questions=total_questions, correctly_answered=correctly_answered_questions)
-        db.add(existing_db_result)
-        db.commit()
-        db.refresh(existing_db_result)
+    correctly_answered_questions = 0
+    db_result = models.Result(test_id=request.test_id, created_at=datetime.datetime.utcnow(), student_id=request.student_id, total_questions=total_questions, correctly_answered=correctly_answered_questions)
+    db.add(db_result)
+    db.commit()
+    db.refresh(db_result)
     total_choices = 0
     correctly_answered = 0
     mark = 0.0
@@ -638,26 +649,28 @@ def create_result(request: schemas.ResultCreate, db: Session = Depends(get_db)):
         all_choices = [value.id for value in db_answers]
 
         total_choices = len(all_choices)
+        if total_choices < len(answer.selected_choices):
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=f"Choose Only {total_choices} choices")
+
         correctly_answered = len(set(all_choices).intersection(set(answer.selected_choices)))
         mark = correctly_answered/float(total_choices)
-        db_ans = db.query(models.Answer).filter(models.Answer.result_id==existing_db_result.id, models.Answer.question_id==answer.question_id).first()
+        db_ans = db.query(models.Answer).filter(models.Answer.result_id==db_result.id, models.Answer.question_id==answer.question_id).first()
         if db_ans:
             db_ans.mark = mark
             db_ans.total_choices = total_choices
             db_ans.correctly_answered = correctly_answered
         else:
-            db_ans = models.Answer(total_choices=total_choices, correctly_answered=correctly_answered, mark =mark, result_id=existing_db_result.id, question_id=answer.question_id)
+            db_ans = models.Answer(total_choices=total_choices, correctly_answered=correctly_answered, mark=mark, result_id=db_result.id, question_id=answer.question_id)
             db.add(db_ans)
         db.commit()
         db.refresh(db_ans)
         correctly_answered_questions += mark
                     
-    existing_db_result.correctly_answered = correctly_answered_questions
-    existing_db_result.created_at = datetime.datetime.now()
+    db_result.correctly_answered = correctly_answered_questions
+    db_result.created_at = datetime.datetime.utcnow()
     db.commit()
-    db.refresh(existing_db_result)
-    return existing_db_result
-
+    db.refresh(db_result)
+    return db_result
 
 
 @router.get('/results', response_model=List[schemas.Result])
@@ -686,7 +699,7 @@ def get_results_of_all_students_of_school(school_id: int, db: Session = Depends(
 
 
 @router.get('/tests-taken', response_model=List[schemas.TestsPerMonth])
-def number_of_tests_taken(start_date = datetime.datetime.strptime('01/01/23', '%d/%m/%y').date(), end_date = datetime.datetime.now().date(), db: Session = Depends(get_db) ):
+def number_of_tests_taken(start_date = datetime.datetime.strptime('01/01/23', '%d/%m/%y').date(), end_date = datetime.datetime.utcnow().date(), db: Session = Depends(get_db) ):
     start_date = datetime.datetime.strptime(start_date,'%Y-%m-%d')
     end_date = datetime.datetime.strptime(end_date, '%Y-%m-%d') + datetime.timedelta(hours=23,minutes=59)
     db_result = db.query(
@@ -696,6 +709,7 @@ def number_of_tests_taken(start_date = datetime.datetime.strptime('01/01/23', '%
     ).filter(models.Result.created_at >= start_date, models.Result.created_at <= end_date).group_by('year', 'month').order_by('year', 'month').all()
     print(db_result)
     return db_result
+
 
 app.include_router(router)
 

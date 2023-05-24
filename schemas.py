@@ -150,7 +150,7 @@ class TestQuestion(BaseModel):
 class Test(BaseModel):
     id: int
     name: str
-    schools: List[School] = []
+    schools: List[School]
     questions: List[TestQuestion]
 
     class Config:
@@ -194,6 +194,7 @@ class Student(BaseModel):
     id: int
     name: str
     year_group: str
+    registered_at: datetime
     school: School
 
     class Config:

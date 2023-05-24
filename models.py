@@ -129,7 +129,7 @@ class Student(Base):
     name = Column(String, index=True)
     year_group = Column(String(255))
     school_id = Column(Integer, ForeignKey("schools.id"))
-    
+    registered_at = Column(DateTime)    
     
     school = relationship("School", back_populates="students")
     results = relationship("Result", back_populates="student")
