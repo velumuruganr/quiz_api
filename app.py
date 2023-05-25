@@ -293,7 +293,7 @@ def get_user_by_id(db: Session, user_id: int):
 
 
 # Get a teacher by ID
-@router.get("/teachers/{teacher_id}")
+@router.get("/teachers/{teacher_id}", response_model=TeacherDetails)
 def read_teacher(teacher_id: int, db: Session = Depends(get_db)):
     db_teacher = db.query(Teacher).filter(Teacher.id == teacher_id).first()
     if not db_teacher:
@@ -308,6 +308,16 @@ def read_teacher(teacher_id: int, db: Session = Depends(get_db)):
         school_address=school.address,
         )
 
+@router.get("/schood_id/teacher/{user_token}")
+def school_id_for_teacher(user_token:str, db: Session = Depends(get_db)):
+    username = get_username(user_token)
+    result = db.query(models.Teacher.schood_id).filter(User.username == username.sub).first()
+    if not result:
+        return None
+    else:
+        return { "school_id": result.school_id }
+
+
 
 @router.get("/profile")
 def get_profile(token:str, db: Session = Depends(get_db)):
@@ -318,6 +328,7 @@ def get_profile(token:str, db: Session = Depends(get_db)):
             "username":user.username,
             "email":user.email,
         }
+    raise None
 
 # Get all teachers
 @router.get("/teachers")
