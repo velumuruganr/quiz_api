@@ -308,10 +308,10 @@ def read_teacher(teacher_id: int, db: Session = Depends(get_db)):
         school_address=school.address,
         )
 
-@router.get("/schood_id/teacher/{user_token}")
+@router.get("/school_id/teacher/{user_token}")
 def school_id_for_teacher(user_token:str, db: Session = Depends(get_db)):
     username = get_username(user_token)
-    result = db.query(models.Teacher.schood_id).filter(User.username == username.sub).first()
+    result = db.query(models.Teacher.school_id).filter(User.username == username.sub).first()
     if not result:
         return None
     else:
