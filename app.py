@@ -1,7 +1,7 @@
 import os
 from jose import jwt
 from typing import List, Optional
-from fastapi import FastAPI, HTTPException, Depends, status, APIRouter
+from fastapi import FastAPI, HTTPException, Depends, status, APIRouter, Query
 from sqlalchemy.orm import Session
 from sqlalchemy import create_engine, func
 from sqlalchemy.orm import sessionmaker, subqueryload
@@ -242,24 +242,30 @@ def create_user(user: UserRequest, db: Session = Depends(get_db)):
 
 
 # Create a new teacher
-@router.post("/teachers")
+@router.post("/teachers", response_model=schemas.TeacherDetails)
 def create_teacher(teacher: schemas.TeacherCreate, db: Session = Depends(get_db)):
     if teacher.password != teacher.confirm_password:
         raise HTTPException(status_code=404, detail="Password and Confirm Password not Matching")
-    hashed_password = get_password_hash(teacher.password)
+    
     db_user = db.query(User).filter(User.username == teacher.username).first()
     if db_user is not None:
         raise HTTPException(status_code=404, detail="Username already Exists")
+    
+    school = db.query(models.School).filter(models.School.name == teacher.school_name).first()
+    if not school:
+        raise HTTPException(status_code=404, detail="School not found")
+    
+    hashed_password = get_password_hash(teacher.password)
     db_user = models.User(
         email=teacher.email,
         username=teacher.username,
         password=hashed_password,
         role="teacher"
     )
+    
     db.add(db_user)
     db.commit()
     db.refresh(db_user)
-    school = db.query(models.School).filter(models.School.name == teacher.school_name).first()
     db_teacher = models.Teacher(
         user_id=db_user.id,
         school_id=school.id
@@ -353,14 +359,21 @@ def read_teachers(db: Session = Depends(get_db)):
 def update_teacher(teacher_id: int, teacher: schemas.TeacherCreate, db: Session = Depends(get_db)):
     db_teacher = db.query(models.Teacher).filter(models.Teacher.id == teacher_id).first()
     if not db_teacher:
-        return None
-    update_data = teacher.dict(exclude_unset=True)
-    for key, value in update_data.items():
-        setattr(db_teacher, key, value)
+        raise HTTPException(status_code=404, detail="Teacher not Found")
+    if teacher.password != teacher.confirm_password:
+        raise HTTPException(status_code=404, detail="Password and Confirm Password not Matching")
+    school = db.query(models.School).filter(models.School.name == teacher.school_name).first()
+    if not school:
+        raise HTTPException(status_code=404, detail="School not found")
+    db_teacher.school_id = school.id
+    
     db_user = get_user_by_id(db, db_teacher.user_id)
     if db_user:
+        hashed_password = get_password_hash(teacher.password)
         db_user.email = teacher.email
         db_user.username = teacher.username
+        db_user.password = hashed_password
+        
         db.commit()
     db.commit()
     db.refresh(db_teacher)
@@ -688,6 +701,11 @@ def create_result(request: schemas.ResultCreate, db: Session = Depends(get_db)):
 def read_all_results(db: Session = Depends(get_db)):
     db_result = db.query(models.Result).all()
     
+    return db_result
+
+@router.post('/results/students', response_model=List[schemas.Result])
+def get_results_of_students_by_ids(student_ids: List[int], db: Session = Depends(get_db)):
+    db_result = db.query(models.Result).filter(models.Result.student_id.in_(student_ids)).all()
     return db_result
 
 @router.get('/students/{student_id}/results', response_model=List[schemas.Result])
