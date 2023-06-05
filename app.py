@@ -317,7 +317,8 @@ def read_teacher(teacher_id: int, db: Session = Depends(get_db)):
 @router.get("/school_id/teacher/{user_token}")
 def school_id_for_teacher(user_token:str, db: Session = Depends(get_db)):
     username = get_username(user_token)
-    result = db.query(models.Teacher.school_id).filter(User.username == username.sub).first()
+    user_id = db.query(models.User.id).filter(models.User.username == username.sub).first()
+    result = db.query(models.Teacher).filter(models.Teacher.user_id == user_id.id).first()
     if not result:
         return None
     else:
@@ -451,6 +452,13 @@ def read_students(start_date = str(datetime.datetime.strptime('01/01/23', '%d/%m
     students = db.query(models.Student).filter(models.Student.registered_at >= start_date, models.Student.registered_at <= end_date).all()
     return students
 
+
+@router.get("/students/schools", response_model=List[schemas.Student])
+def read_students_by_school(school_id: int,db: Session = Depends(get_db)):
+    students = db.query(models.Student).filter(models.Student.school_id == school_id).all()
+    return students
+
+
 # create a new school
 @router.post("/students", response_model=schemas.Student)
 def create_student(student: schemas.StudentCreate, db: Session = Depends(get_db)):
@@ -461,6 +469,7 @@ def create_student(student: schemas.StudentCreate, db: Session = Depends(get_db)
     db.refresh(new_student)
     return new_student
 
+
 # get a specific school by ID
 @router.get("/students/{student_id}", response_model=schemas.Student)
 def read_student(student_id: int, db: Session = Depends(get_db)):
@@ -468,6 +477,7 @@ def read_student(student_id: int, db: Session = Depends(get_db)):
     if not student:
         raise HTTPException(status_code=404, detail="Student not found")
     return student
+
 
 # update a specific student by ID
 @router.put("/students/{student_id}", response_model=schemas.Student)
@@ -479,6 +489,7 @@ def update_student(student_id: int, student: schemas.StudentUpdate, db: Session 
         setattr(existing_student, field, value)
     db.commit()
     return existing_student
+
 
 # delete a specific student by ID
 @router.delete("/students/{student_id}")
@@ -660,6 +671,7 @@ def create_result(request: schemas.ResultCreate, db: Session = Depends(get_db)):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Student not found")
     total_questions = db.query(models.Question).filter(models.Question.test_id == request.test_id).count()
     correctly_answered_questions = 0
+    # db_result = db.query(models.Result).filter(models.Student.id == request.student_id, models.Test.id == request.test_id).order_by(models.Result.created_at)
     db_result = models.Result(test_id=request.test_id, created_at=datetime.datetime.utcnow(), student_id=request.student_id, total_questions=total_questions, correctly_answered=correctly_answered_questions)
     db.add(db_result)
     db.commit()
